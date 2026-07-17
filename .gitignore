@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Environment
+.env
+venv/
+
+# Vector database
+vector_store/
+*.index
+*.pkl
+
+# Logs
+*.log

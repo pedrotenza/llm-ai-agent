@@ -1,0 +1,158 @@
+
+G:\Industrial-RAG-Assistant\
+
+venv\Scripts\activate
+pip freeze > requirements.txt
+
+
+python -m src.rag_pipeline
+
+
+Was ist eine Gefährdungsbeurteilung?
+
+
+
+
+https://chatgpt.com/c/6a54f3cd-66c4-83eb-9bc4-63480baecfe2
+
+
+
+ RETRIEVAL-AUGMENTED GENERATION (RAG) PIPELINE ARCHITECTURE
+
+
+===========================
+1. INDEXING PHASE (Offline)
+===========================
+
+PDF documents
+      |
+      v
+pdf_loader.py
+      |
+      ├── load_all_pdfs(folder)
+      |       |
+      |       └── Reads every PDF inside /documents
+      |
+      ├── load_pdf(file)
+      |       |
+      |       └── Extracts text from every PDF page
+      |
+      └── split_text(text)
+              |
+              └── Splits the extracted text into chunks
+
+
+      |
+      v
+
+embeddings.py
+      |
+      ├── SentenceTransformer("all-MiniLM-L6-v2")
+      |
+      └── create_embeddings(chunks)
+              |
+              └── Converts every text chunk into an embedding vector
+
+
+      |
+      v
+
+vector_store.py
+      |
+      ├── create_vector_store(embeddings, chunks)
+      |       |
+      |       ├── Creates a FAISS index
+      |       ├── Stores embedding vectors
+      |       └── Associates every vector with its original text chunk
+      |
+      └── save_vector_store()
+              |
+              ├── Saves faiss.index
+              └── Saves metadata.pkl
+
+
+==================================================================
+
+==========================
+2. QUERY PHASE (Online)
+==========================
+
+User enters a question
+        |
+        v
+
+rag_pipeline.py
+        |
+        └── retrieve_information(question)
+                |
+                ├── create_embeddings([question])[0]
+                |       |
+                |       ├── File:
+                |       |     embeddings.py
+                |       |
+                |       └── Converts the user question into
+                |           an embedding vector
+                |
+                ├── load_vector_store()
+                |       |
+                |       ├── File:
+                |       |     vector_store.py
+                |       |
+                |       └── Loads:
+                |             • faiss.index
+                |             • metadata.pkl
+                |
+                └── search_vector_store(index,
+                                        metadata,
+                                        embedding,
+                                        k=3)
+                        |
+                        ├── File:
+                        |     vector_store.py
+                        |
+                        ├── Performs similarity search in FAISS
+                        |
+                        └── Retrieves the 3 most relevant
+                            document chunks
+
+
+        |
+        v
+
+context = "\n\n".join(relevant_chunks)
+        |
+        └── File:
+              rag_pipeline.py
+        |
+        └── Combines the retrieved chunks into a single context
+
+
+        |
+        v
+
+generate_answer(question, context)
+        |
+        ├── File:
+        |     rag_pipeline.py
+        |
+        ├── Builds the prompt
+        |
+        ├── Adds:
+        |      • User question
+        |      • Retrieved context
+        |
+        └── ChatOllama(model="qwen2.5:0.5b")
+                |
+                └── Generates the final answer
+
+
+        |
+        v
+
+Final answer returned to the user
+
+
+
+
+
+
