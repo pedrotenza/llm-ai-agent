@@ -18,6 +18,44 @@ https://chatgpt.com/c/6a97e5ac-2e80-83ed-9f3f-0b7086529a9e
 
 
 
+                    ┌──────────────┐
+                    │    Usuario   │
+                    └──────┬───────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │     Agent    │
+                    │   LLM/Brain  │
+                    └──────┬───────┘
+                           │
+             ┌─────────────┼─────────────┐
+             │             │             │
+             ▼             ▼             ▼
+          RAG Tool      API Tool      Memory
+             │             │             │
+             ▼             ▼             ▼
+          FAISS         REST API     Conversation
+             │
+             ▼
+         Documents
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # LLM AI Agent with RAG
 
@@ -66,24 +104,29 @@ User → Agent → RAG → sufficient information → Answer
 ## Project Structure
 
 ```text
-project/
+llm-ai-agent/
 │
-├── documents/
+├──    documents
 │
-├── rag/
-│   ├── pdf_loader.py
-│   ├── embeddings.py
-│   ├── vector_store.py
-│   └── rag_pipeline.py
+├──    requirements.txt
 │
-├── agent/
-│   ├── agent.py
-│   ├── tools.py
-│   ├── memory.py
-│   └── prompts.py
-│
-├── main.py
-└── requirements.txt
+├──    src
+       │
+       │
+       ├── rag/
+       │   ├── pdf_loader.py
+       │   ├── embeddings.py
+       │   ├── vector_store.py
+       │   └── rag_pipeline.py
+       │
+       ├── agent/
+       │   ├── agent.py
+       │   ├── tools.py
+       │   ├── memory.py
+       │   └── prompts.py
+       │
+       ├── main.py
+
 ```
 
 ## Technologies

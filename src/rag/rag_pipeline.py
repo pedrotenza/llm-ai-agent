@@ -1,8 +1,21 @@
 # Receives the user's question and retrieves relevant document chunks.
+    # Converts the question text into an embedding vector.
+    # Loads the FAISS index and document metadata.
+    # Searches FAISS and returns the 3 most relevant text chunks.
+    # Returns the retrieved chunks to be used as context for the LLM.
 
 # then generates the final answer using the LLM.
+    # Creates the Ollama LLM instance using the Qwen2.5 model.
+    # Builds the prompt with instructions, context, and user question.
+    # Sends the prompt to the LLM and receives the generated answer.
+    # Returns only the text content of the LLM response.
 
 # Checks if the script is executed directly.
+    # Gets the user's question.
+    # Retrieves relevant document chunks.
+    # Combines chunks into a single context.
+    # Generates the final answer using the LLM.
+    # Prints the generated answer.
 
 
 from src.rag.embeddings import create_embeddings
@@ -116,21 +129,3 @@ if __name__ == "__main__":
     print(answer)
 
 
-# Receives the user's question and retrieves relevant document chunks.
-    # Converts the question text into an embedding vector.
-    # Loads the FAISS index and document metadata.
-    # Searches FAISS and returns the 3 most relevant text chunks.
-    # Returns the retrieved chunks to be used as context for the LLM.
-
-# then generates the final answer using the LLM.
-    # Creates the Ollama LLM instance using the Qwen2.5 model.
-    # Builds the prompt with instructions, context, and user question.
-    # Sends the prompt to the LLM and receives the generated answer.
-    # Returns only the text content of the LLM response.
-
-# Checks if the script is executed directly.
-    # Gets the user's question.
-    # Retrieves relevant document chunks.
-    # Combines chunks into a single context.
-    # Generates the final answer using the LLM.
-    # Prints the generated answer.
