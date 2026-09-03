@@ -5,9 +5,8 @@
 # Checks if the script is executed directly.
 
 
-
-from src.embeddings import create_embeddings
-from src.vector_store import load_vector_store, search_vector_store
+from src.rag.embeddings import create_embeddings
+from src.rag.vector_store import load_vector_store, search_vector_store
 
 from langchain_ollama import ChatOllama
 

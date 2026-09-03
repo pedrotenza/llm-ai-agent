@@ -1,11 +1,11 @@
 
-G:\Industrial-RAG-Assistant\
+cd G:\software-projects\llm-applications\llm-ai-agent
 
 venv\Scripts\activate
 pip freeze > requirements.txt
 
 
-python -m src.rag_pipeline
+python -m src.rag.rag_pipeline
 
 
 Was ist eine Gefährdungsbeurteilung?
@@ -14,145 +14,123 @@ Was ist eine Gefährdungsbeurteilung?
 
 
 https://chatgpt.com/c/6a54f3cd-66c4-83eb-9bc4-63480baecfe2
-
-
-
- RETRIEVAL-AUGMENTED GENERATION (RAG) PIPELINE ARCHITECTURE
-
-
-===========================
-1. INDEXING PHASE (Offline)
-===========================
-
-PDF documents
-      |
-      v
-pdf_loader.py
-      |
-      ├── load_all_pdfs(folder)
-      |       |
-      |       └── Reads every PDF inside /documents
-      |
-      ├── load_pdf(file)
-      |       |
-      |       └── Extracts text from every PDF page
-      |
-      └── split_text(text)
-              |
-              └── Splits the extracted text into chunks
-
-
-      |
-      v
-
-embeddings.py
-      |
-      ├── SentenceTransformer("all-MiniLM-L6-v2")
-      |
-      └── create_embeddings(chunks)
-              |
-              └── Converts every text chunk into an embedding vector
-
-
-      |
-      v
-
-vector_store.py
-      |
-      ├── create_vector_store(embeddings, chunks)
-      |       |
-      |       ├── Creates a FAISS index
-      |       ├── Stores embedding vectors
-      |       └── Associates every vector with its original text chunk
-      |
-      └── save_vector_store()
-              |
-              ├── Saves faiss.index
-              └── Saves metadata.pkl
-
-
-==================================================================
-
-==========================
-2. QUERY PHASE (Online)
-==========================
-
-User enters a question
-        |
-        v
-
-rag_pipeline.py
-        |
-        └── retrieve_information(question)
-                |
-                ├── create_embeddings([question])[0]
-                |       |
-                |       ├── File:
-                |       |     embeddings.py
-                |       |
-                |       └── Converts the user question into
-                |           an embedding vector
-                |
-                ├── load_vector_store()
-                |       |
-                |       ├── File:
-                |       |     vector_store.py
-                |       |
-                |       └── Loads:
-                |             • faiss.index
-                |             • metadata.pkl
-                |
-                └── search_vector_store(index,
-                                        metadata,
-                                        embedding,
-                                        k=3)
-                        |
-                        ├── File:
-                        |     vector_store.py
-                        |
-                        ├── Performs similarity search in FAISS
-                        |
-                        └── Retrieves the 3 most relevant
-                            document chunks
-
-
-        |
-        v
-
-context = "\n\n".join(relevant_chunks)
-        |
-        └── File:
-              rag_pipeline.py
-        |
-        └── Combines the retrieved chunks into a single context
-
-
-        |
-        v
-
-generate_answer(question, context)
-        |
-        ├── File:
-        |     rag_pipeline.py
-        |
-        ├── Builds the prompt
-        |
-        ├── Adds:
-        |      • User question
-        |      • Retrieved context
-        |
-        └── ChatOllama(model="qwen2.5:0.5b")
-                |
-                └── Generates the final answer
-
-
-        |
-        v
-
-Final answer returned to the user
+https://chatgpt.com/c/6a97e5ac-2e80-83ed-9f3f-0b7086529a9e
 
 
 
 
+# LLM AI Agent with RAG
 
+An LLM-based AI Agent that uses a **RAG pipeline** to retrieve information from internal PDF documents and generate context-aware responses using a local LLM.
 
+The Agent is designed to use RAG as its primary knowledge source and later use **web search as a fallback** when the required information is not available in the internal documentation.
+
+## Architecture
+
+```text
+                         ┌──────────────────┐
+                         │      User        │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │     AI Agent     │
+                         │                  │
+                         │  Reasoning       │
+                         │  Tools           │
+                         │  Memory          │
+                         │  Prompts         │
+                         └────────┬─────────┘
+                                  │
+                 ┌────────────────┼────────────────┐
+                 │                │                │
+                 ▼                ▼                ▼
+          ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+          │   RAG Tool  │  │ Web Search  │  │   Memory    │
+          └──────┬──────┘  │    Tool     │  └─────────────┘
+                 │         └─────────────┘
+                 ▼
+          ┌──────────────────┐
+          │  FAISS + PDFs    │
+          └──────────────────┘
+```
+
+**Information priority:**
+
+```text
+User → Agent → RAG → sufficient information → Answer
+                 │
+                 └── insufficient → Web Search → Answer
+```
+
+## Project Structure
+
+```text
+project/
+│
+├── documents/
+│
+├── rag/
+│   ├── pdf_loader.py
+│   ├── embeddings.py
+│   ├── vector_store.py
+│   └── rag_pipeline.py
+│
+├── agent/
+│   ├── agent.py
+│   ├── tools.py
+│   ├── memory.py
+│   └── prompts.py
+│
+├── main.py
+└── requirements.txt
+```
+
+## Technologies
+
+* Python
+* LangChain
+* FAISS
+* Sentence Transformers
+* `all-MiniLM-L6-v2`
+* Ollama
+* Qwen 2.5 0.5B
+
+## Installation
+
+```bash
+pip install -r requirements.txt
+ollama pull qwen2.5:0.5b
+```
+
+Place PDF documents in:
+
+```text
+documents/
+```
+
+Run:
+
+```bash
+python main.py
+```
+
+## Roadmap
+
+* [x] PDF-based RAG pipeline
+* [ ] RAG as an Agent tool
+* [ ] Web search fallback
+* [ ] Conversation memory
+* [ ] Additional tools
+* [ ] Source/page references
+* [ ] Agent evaluation
+
+## Goal
+
+Build a modular local **LLM AI Agent** that combines:
+
+```text
+RAG + Tools + Memory + LLM
+```
+
+with internal documentation as the primary knowledge source and web search as a fallback.
