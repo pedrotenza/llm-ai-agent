@@ -1,8 +1,8 @@
-
 # Creates a FAISS vector database from embeddings and text chunks.
+# Saves metadata together with each text chunk, including source and page.
 # Saves the FAISS database locally.
 # Loads the existing FAISS database.
-# Searches the FAISS database and returns relevant chunks.
+# Searches the FAISS database and returns relevant chunks with metadata.
 # Loads PDFs, splits text into chunks, creates embeddings,
 # builds the FAISS database, and stores it locally.
 
@@ -13,7 +13,7 @@ import pickle
 
 
 # Creates a FAISS vector database from embeddings and text chunks.
-def create_vector_store(embeddings, text_chunks):
+def create_vector_store(embeddings, documents):
 
     # Converts embeddings into float32 format required by FAISS.
     embeddings = np.array(embeddings).astype("float32")
@@ -32,9 +32,10 @@ def create_vector_store(embeddings, text_chunks):
     # Adds the embedding vectors to the FAISS database.
     index.add(embeddings)
 
-    # Stores the original text chunks as metadata.
+    # Stores the original text chunks and their metadata.
+    # Each document contains the text, source file and page number.
     metadata = {
-        "texts": text_chunks
+        "documents": documents
     }
 
     # Returns the FAISS index and associated metadata.
@@ -56,7 +57,7 @@ def save_vector_store(index, metadata):
         "vector_store/faiss.index"
     )
 
-    # Saves the text metadata using pickle.
+    # Saves the text and document metadata using pickle.
     with open(
         "vector_store/metadata.pkl",
         "wb"
@@ -104,21 +105,32 @@ def search_vector_store(index, metadata, query_embedding, k=3):
         k
     )
 
-    # Creates a list to store the retrieved text chunks.
+    # Creates a list to store the retrieved documents.
     results = []
 
-    # Loops through the found vector positions.
-    for idx in indices[0]:
+    # Loops through the found vector positions and similarity scores.
+    for idx, distance in zip(
+        indices[0],
+        distances[0]
+    ):
 
-        # Checks that the index exists in the stored texts.
-        if idx >= 0 and idx < len(metadata["texts"]):
+        # Checks that the index exists in the stored documents.
+        if idx >= 0 and idx < len(metadata["documents"]):
 
-            # Adds the corresponding text chunk to the results.
+            # Gets the document associated with the vector.
+            document = metadata["documents"][idx]
+
+            # Adds the document text, source, page and similarity score.
             results.append(
-                metadata["texts"][idx]
+                {
+                    "text": document["text"],
+                    "source": document["source"],
+                    "page": document["page"],
+                    "score": float(distance)
+                }
             )
 
-    # Returns the most relevant document chunks.
+    # Returns the most relevant document chunks with their metadata.
     return results
 
 
@@ -137,15 +149,16 @@ if __name__ == "__main__":
     # Loads all PDF documents from the folder.
     print("Loading PDFs...")
 
-    text = load_all_pdfs(
+    documents = load_all_pdfs(
         documents_folder
     )
 
     # Splits the document text into smaller chunks.
+    # Each chunk keeps its source file and page number.
     print("Splitting text...")
 
     chunks = split_text(
-        text
+        documents
     )
 
     # Displays the number of generated chunks.
@@ -153,11 +166,16 @@ if __name__ == "__main__":
         f"Created {len(chunks)} chunks"
     )
 
-    # Converts text chunks into embedding vectors.
+    # Extracts only the text from each chunk for embedding creation.
     print("Creating embeddings...")
 
+    texts = [
+        chunk["text"]
+        for chunk in chunks
+    ]
+
     embeddings = create_embeddings(
-        chunks
+        texts
     )
 
     # Creates the FAISS vector database.
@@ -178,4 +196,3 @@ if __name__ == "__main__":
     print(
         "Vector store created successfully"
     )
-
