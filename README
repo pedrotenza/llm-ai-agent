@@ -7,6 +7,19 @@ pip freeze > requirements.txt
 
 python -m src.rag.rag_pipeline
 
+# 1. Check what has changed
+git status
+
+# 2. Stage the changes
+git add .
+
+# 3. Create a commit
+git commit -m "Description of the changes"
+
+# 4. Push the changes to the remote repository
+git push
+
+
 
 Was ist eine Gefährdungsbeurteilung?
 
@@ -14,7 +27,7 @@ Was ist eine Gefährdungsbeurteilung?
 
 
 https://chatgpt.com/c/6a54f3cd-66c4-83eb-9bc4-63480baecfe2
-https://chatgpt.com/c/6a97e5ac-2e80-83ed-9f3f-0b7086529a9e
+
 
 
 
@@ -42,6 +55,34 @@ https://chatgpt.com/c/6a97e5ac-2e80-83ed-9f3f-0b7086529a9e
 
 
 
+llm-ai-agent/
+│
+├── documents/
+│
+├── vector_store/
+│
+├── requirements.txt
+│
+└── src/
+    │
+    ├── rag/
+    │   ├── pdf_loader.py
+    │   ├── embeddings.py
+    │   ├── vector_store.py
+    │   └── rag_pipeline.py
+    │
+    ├── agent/
+    │   ├── agent.py
+    │   ├── tools.py
+    │   ├── memory.py
+    │   └── prompts.py
+    │
+    ├── api/
+    │   ├── client.py
+    │   └── services.py
+    │
+    ├── config.py
+    └── main.py
 
 
 
