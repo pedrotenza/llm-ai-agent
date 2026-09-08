@@ -5,7 +5,11 @@ venv\Scripts\activate
 pip freeze > requirements.txt
 
 
+
 python -m src.rag.rag_pipeline
+
+Was ist eine Gefährdungsbeurteilung?
+
 
 # 1. Check what has changed
 git status
@@ -21,12 +25,12 @@ git push
 
 
 
-Was ist eine Gefährdungsbeurteilung?
 
 
 
 
 https://chatgpt.com/c/6a54f3cd-66c4-83eb-9bc4-63480baecfe2
+https://chatgpt.com/c/6a997e6e-8244-83eb-85a8-534d58cc40cc
 
 
 

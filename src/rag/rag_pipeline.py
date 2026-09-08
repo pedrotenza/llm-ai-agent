@@ -1,131 +1,79 @@
-# Receives the user's question and retrieves relevant document chunks.
-    # Converts the question text into an embedding vector.
-    # Loads the FAISS index and document metadata.
-    # Searches FAISS and returns the 3 most relevant text chunks.
-    # Returns the retrieved chunks to be used as context for the LLM.
 
-# then generates the final answer using the LLM.
-    # Creates the Ollama LLM instance using the Qwen2.5 model.
-    # Builds the prompt with instructions, context, and user question.
-    # Sends the prompt to the LLM and receives the generated answer.
-    # Returns only the text content of the LLM response.
-
-# Checks if the script is executed directly.
-    # Gets the user's question.
-    # Retrieves relevant document chunks.
-    # Combines chunks into a single context.
-    # Generates the final answer using the LLM.
-    # Prints the generated answer.
-
+"""
+RAG Pipeline - Solo capa de retrieval.
+Esta capa se encarga ÚNICAMENTE de recuperar información de los documentos.
+La generación de respuestas la maneja el Agent.
+"""
 
 from src.rag.embeddings import create_embeddings
 from src.rag.vector_store import load_vector_store, search_vector_store
 
-from langchain_ollama import ChatOllama
 
-
-# Receives the user's question and retrieves relevant document chunks.
-def retrieve_information(question):
-
-    # Converts the question text into an embedding vector.
-    question_embedding = create_embeddings(
-        [question]
-    )[0]
-
-
-    # Loads the FAISS index and document metadata.
+def retrieve_information(question, k=3):
+    """
+    Recupera los chunks más relevantes de los documentos para una pregunta.
+    
+    Args:
+        question (str): La pregunta del usuario
+        k (int): Número de chunks a recuperar (por defecto 3)
+    
+    Returns:
+        list: Lista de textos de los chunks más relevantes
+    """
+    # Convierte la pregunta en un embedding
+    question_embedding = create_embeddings([question])[0]
+    
+    # Carga el índice FAISS y los metadatos
     index, metadata = load_vector_store()
-
-
-    # Searches FAISS and returns the 3 most relevant text chunks.
+    
+    # Busca los k chunks más relevantes
     results = search_vector_store(
         index,
         metadata,
         question_embedding,
-        k=3
+        k=k
     )
-
-
-    # Returns the retrieved chunks to be used as context for the LLM.
+    
+    # Retorna solo los textos (la generación la hace el Agent)
     return results
 
 
-# then generates the final answer using the LLM.
-def generate_answer(question, context):
-
-    # Creates the Ollama LLM instance using the Qwen2.5 model.
-    llm = ChatOllama(
-        model="qwen2.5:0.5b",
-        temperature=0,
-        num_ctx=128,
-        num_predict=100
-    )
-
-
-    # Builds the prompt with instructions, context, and user question.
-    prompt = f"""
-Du bist ein Assistent für Arbeitssicherheit.
-
-Beantworte die Frage ausschließlich anhand des bereitgestellten Kontexts.
-
-Regeln:
-- Antworte auf Deutsch.
-- Maximal 2 Sätze.
-- Keine Aufzählungen.
-- Keine allgemeinen Erklärungen.
-- Keine Vermutungen.
-- Wiederhole nicht die Frage.
-- Wenn die Information nicht im Kontext steht, schreibe:
-  "Ich weiß es anhand des Kontexts nicht."
-
-Kontext:
-{context}
-
-Frage:
-{question}
-
-Antwort:
-"""
-
-
-    # Sends the prompt to the LLM and receives the generated answer.
-    response = llm.invoke(prompt)
-
-
-    # Returns only the text content of the LLM response.
-    return response.content
-
-
+def retrieve_information_with_metadata(question, k=3):
+    """
+    Recupera chunks con metadatos completos (fuente, página, etc.)
+    Útil para que el Agent pueda citar fuentes.
     
+    Args:
+        question (str): La pregunta del usuario
+        k (int): Número de chunks a recuperar (por defecto 3)
+    
+    Returns:
+        list: Lista de diccionarios con texto y metadatos
+    """
+    question_embedding = create_embeddings([question])[0]
+    index, metadata = load_vector_store()
+    
+    # Busca los k chunks más relevantes
+    results = search_vector_store(
+        index,
+        metadata,
+        question_embedding,
+        k=k
+    )
+    
+    # Retorna los resultados con metadata
+    # NOTA: Esto asume que search_vector_store devuelve índices
+    # Tendrás que modificar search_vector_store para que devuelva metadata
+    
+    return results
 
-# Checks if the script is executed directly.
+
 if __name__ == "__main__":
-
-    # Gets the user's question.
+    # Para pruebas rápidas
     question = input("\nAsk your question: ")
-
-
-    # Retrieves relevant document chunks.
-    relevant_chunks = retrieve_information(
-        question
-    )
-
-
-    # Combines chunks into a single context.
-    context = "\n\n".join(
-        relevant_chunks
-    )
-
-
-    # Generates the final answer using the LLM.
-    answer = generate_answer(
-        question,
-        context
-    )
-
-
-    # Prints the generated answer.
-    print("\n\nAnswer:\n")
-    print(answer)
-
-
+    chunks = retrieve_information(question, k=3)
+    
+    print("\nRetrieved chunks:")
+    for i, chunk in enumerate(chunks, 1):
+        print(f"\n--- Chunk {i} ---")
+        print(chunk[:200] + "...")  # Muestra solo los primeros 200 caracteres

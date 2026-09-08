@@ -1,0 +1,5 @@
+# src/config.py
+LLM_MODEL = "qwen2.5:0.5b"
+TEMPERATURE = 0
+NUM_CTX = 4096
+NUM_PREDICT = 300
