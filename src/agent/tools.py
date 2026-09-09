@@ -1,62 +1,76 @@
 # src/agent/tools.py
 """
-Tools that the agent can use to interact with the system.
-These tools abstract away the complexity of the underlying systems (RAG, API, etc.).
+Herramientas que el agente puede utilizar para interactuar con el sistema.
+Cada herramienta recibe parámetros simples y devuelve un string legible.
 """
 
 from src.rag.rag_pipeline import retrieve_information
 from src.api.services import get_machine_status, get_all_machines
 
 
-def search_documents(question, k=3):
+def search_documents(question: str) -> str:
     """
-    Search for relevant information in the documents.
+    Busca información en los documentos PDF (manuales, normativas, procedimientos).
+    Úsalo cuando el usuario pregunte sobre reglas, pasos a seguir, o descripciones
+    que puedan estar en los manuales.
 
     Args:
-        question (str): The user's question to search for
-        k (int): Number of chunks to retrieve (default: 3)
+        question (str): La pregunta del usuario.
 
     Returns:
-        list: List of text chunks relevant to the question
-
-    Example:
-        >>> search_documents("How often should the machine be maintained?")
-        ['The machine should be maintained every 500 hours...', ...]
+        str: Fragmentos relevantes formateados o mensaje de error.
     """
-    results = retrieve_information(question, k=k)
-    
-    if not results:
-        return ["No information found."]
-    
-    return results
+    try:
+        # Suponemos que retrieve_information devuelve una lista de dicts con 'text' y 'source'
+        results = retrieve_information(question, k=3)
+        if not results:
+            return "No encontré información relevante en los documentos."
+
+        # Formateamos para que el LLM entienda las fuentes
+        context = "\n\n".join([
+            f"Fuente: {r.get('source', 'desconocida')}\nTexto: {r['text']}"
+            for r in results
+        ])
+        return f"Información extraída de los documentos:\n{context}"
+    except Exception as e:
+        return f"Error al buscar en documentos: {str(e)}"
 
 
-def get_machine_info(machine_id):
+def get_machine_api_status(machine_id: str) -> str:
     """
-    Get current status and information about a specific machine.
+    Obtiene el estado en tiempo real de una máquina específica (temperatura,
+    estado operativo, última fecha de mantenimiento, etc.).
 
     Args:
-        machine_id (str): The machine identifier
+        machine_id (str): Identificador de la máquina (ej. "M-101").
 
     Returns:
-        dict: Machine status information
-
-    Example:
-        >>> get_machine_info("M-102")
-        {'id': 'M-102', 'status': 'running', 'temperature': 84}
+        str: Información detallada de la máquina o mensaje de error.
     """
-    return get_machine_status(machine_id)
+    data = get_machine_status(machine_id)
+    if isinstance(data, dict) and "error" in data:
+        return f"No se pudo obtener el estado de {machine_id}: {data['error']}"
+
+    # Si la respuesta es un dict con los campos esperados
+    return (f"Máquina {data.get('id', machine_id)} ({data.get('name', 'N/A')}):\n"
+            f"- Estado: {data.get('status', 'Desconocido')}\n"
+            f"- Temperatura: {data.get('temperature', 'N/A')}°C\n"
+            f"- Último mantenimiento: {data.get('last_maintenance', 'N/A')}")
 
 
-def list_all_machines():
-    """
-    Get information about all machines.
-
-    Returns:
-        list: List of all machines with their status
-
-    Example:
-        >>> list_all_machines()
-        [{'id': 'M-101', 'status': 'running'}, {'id': 'M-102', 'status': 'idle'}]
-    """
-    return get_all_machines()
+# (Opcional) Si quieres darle al agente la capacidad de listar todas las máquinas,
+# puedes descomentar esta función y añadirla como herramienta:
+#
+# def list_all_machines() -> str:
+#     """
+#     Obtiene el listado de todas las máquinas con su estado actual.
+#     """
+#     data = get_all_machines()
+#     if isinstance(data, dict) and "error" in data:
+#         return f"Error al obtener la lista de máquinas: {data['error']}"
+#     if not data:
+#         return "No hay máquinas registradas."
+#     lines = ["Listado de máquinas:"]
+#     for m in data:
+#         lines.append(f"- {m.get('id', '?')}: {m.get('status', 'desconocido')}")
+#     return "\n".join(lines)

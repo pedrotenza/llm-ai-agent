@@ -69,6 +69,7 @@ llm-ai-agent/
 │
 └── src/
     │
+    ├── __init__.py 
     ├── rag/
     │   ├── pdf_loader.py
     │   ├── embeddings.py
@@ -85,6 +86,8 @@ llm-ai-agent/
     │   ├── client.py
     │   └── services.py
     │
+    ├── server/
+    │   └── main.py
     ├── config.py
     └── main.py
 

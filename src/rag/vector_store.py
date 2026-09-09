@@ -108,6 +108,15 @@ def search_vector_store(index, metadata, query_embedding, k=3):
     # Creates a list to store the retrieved documents.
     results = []
 
+    # --- COMPATIBILITY FIX: supports both "documents" and "texts" keys ---
+    if "documents" in metadata:
+        docs = metadata["documents"]
+    elif "texts" in metadata:
+        # Convert old format to new format (source unknown)
+        docs = [{"text": t, "source": "desconocido", "page": 0} for t in metadata["texts"]]
+    else:
+        docs = []
+
     # Loops through the found vector positions and similarity scores.
     for idx, distance in zip(
         indices[0],
@@ -115,10 +124,10 @@ def search_vector_store(index, metadata, query_embedding, k=3):
     ):
 
         # Checks that the index exists in the stored documents.
-        if idx >= 0 and idx < len(metadata["documents"]):
+        if idx >= 0 and idx < len(docs):
 
             # Gets the document associated with the vector.
-            document = metadata["documents"][idx]
+            document = docs[idx]
 
             # Adds the document text, source, page and similarity score.
             results.append(
@@ -138,10 +147,10 @@ def search_vector_store(index, metadata, query_embedding, k=3):
 if __name__ == "__main__":
 
     # Imports functions to load PDFs and split text.
-    from src.pdf_loader import load_all_pdfs, split_text
+    from src.rag.pdf_loader import load_all_pdfs, split_text
 
     # Imports the function to create embeddings.
-    from src.embeddings import create_embeddings
+    from src.rag.embeddings import create_embeddings
 
     # Defines the folder containing the PDF documents.
     documents_folder = "documents"
@@ -149,17 +158,23 @@ if __name__ == "__main__":
     # Loads all PDF documents from the folder.
     print("Loading PDFs...")
 
-    documents = load_all_pdfs(
+    raw_docs = load_all_pdfs(
         documents_folder
     )
 
-    # Splits the document text into smaller chunks.
-    # Each chunk keeps its source file and page number.
-    print("Splitting text...")
+    # raw_docs is a list of dicts: [{"text": ..., "source": ..., "page": ...}, ...]
+    # Extract all texts and combine into a single string.
+    all_text = "\n".join([doc["text"] for doc in raw_docs])
 
-    chunks = split_text(
-        documents
-    )
+    # Split the combined text into chunks (split_text expects a string).
+    print("Splitting text...")
+    text_chunks = split_text(all_text)
+
+    # Convert each chunk into the required dictionary format (source/page unknown).
+    chunks = [
+        {"text": chunk, "source": "desconocido", "page": 0}
+        for chunk in text_chunks
+    ]
 
     # Displays the number of generated chunks.
     print(

@@ -1,5 +1,10 @@
 # src/config.py
-LLM_MODEL = "qwen2.5:0.5b"
+
+# --- LLM CONFIGURATION ---
+LLM_MODEL = "llama3.2:3b"   
 TEMPERATURE = 0
 NUM_CTX = 4096
 NUM_PREDICT = 300
+
+# --- API CONFIGURATION (YOUR LOCAL SERVER!) ---
+API_BASE_URL = "http://127.0.0.1:8000"
