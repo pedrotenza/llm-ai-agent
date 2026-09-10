@@ -1,11 +1,22 @@
 
 cd G:\software-projects\llm-applications\llm-ai-agent
 
-venv\Scripts\activate
 pip freeze > requirements.txt
 
+venv\Scripts\activate
 
 
+
+TEMINAL 1 (API server)
+
+python -m uvicorn src.server.main:app --reload
+
+TEMINAL 2 (Agent)
+
+python -m src.main
+
+
+RUNNING RAG
 python -m src.rag.rag_pipeline
 
 Was ist eine Gefährdungsbeurteilung?
@@ -42,19 +53,26 @@ https://chatgpt.com/c/6a997e6e-8244-83eb-85a8-534d58cc40cc
                            ▼
                     ┌──────────────┐
                     │     Agent    │
-                    │   LLM/Brain  │
-                    └──────┬───────┘
-                           │
-             ┌─────────────┼─────────────┐
-             │             │             │
-             ▼             ▼             ▼
-          RAG Tool      API Tool      Memory
-             │             │             │
-             ▼             ▼             ▼
-          FAISS         REST API     Conversation
-             │
-             ▼
-         Documents
+                                        ┌──────────────┐
+                         │    Usuario   │
+                         └──────┬───────┘
+                                │
+                                ▼
+                         ┌──────────────┐
+                         │    Agent     │
+                         │   LLM/Brain  │
+                         └──────┬───────┘
+                                │
+                  ┌─────────────┼─────────────┐
+                  │             │             │
+                  ▼             ▼             ▼
+               RAG Tool      API Tool      Memory
+                  │             │             │
+                  ▼             ▼             ▼
+                FAISS        REST API    Conversation
+                  │
+                  ▼
+               Documents
 
 
 
@@ -70,6 +88,7 @@ llm-ai-agent/
 └── src/
     │
     ├── __init__.py 
+    │
     ├── rag/
     │   ├── pdf_loader.py
     │   ├── embeddings.py
@@ -225,3 +244,22 @@ RAG + Tools + Memory + LLM
 ```
 
 with internal documentation as the primary knowledge source and web search as a fallback.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
