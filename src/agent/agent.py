@@ -16,6 +16,7 @@ from sentence_transformers import SentenceTransformer
 
 from src.agent.tools import search_documents, get_machine_api_status
 from src.agent.prompts import SYSTEM_PROMPT
+from src.agent.memory import memory
 from src.config import LLM_MODEL, TEMPERATURE, NUM_CTX
 
 
@@ -94,7 +95,7 @@ _ROUTER_VECTOR_LABELS = [
     label for label in _ROUTER_LABELS for _ in _ROUTER_EXAMPLES[label]
 ]
 
-# Defines the minimum similarity score required for the semantic router.
+# Defines the minimum similarity score required by the semantic router.
 _ROUTER_THRESHOLD = 0.45
 
 
@@ -276,6 +277,8 @@ def invoke_agent(question: str) -> str:
     3. The LLM generates the final answer.
     """
 
+    memory_context = memory.get_context_for_question(question)
+
     # Calls the router to decide which tool should be used.
     decision = decide_tool(question)
 
@@ -300,6 +303,9 @@ def invoke_agent(question: str) -> str:
 
         # Extracts the machine ID from the user's question.
         machine_id = extract_machine_id(question)
+
+        if not machine_id:
+            machine_id = extract_machine_id(memory_context)
 
         # Checks if a machine ID was found.
         if not machine_id:
@@ -326,6 +332,9 @@ def invoke_agent(question: str) -> str:
 
 You are now answering the user's question.
 
+Previous conversation:
+{memory_context}
+
 If tool information is provided below, use it as the primary source.
 Do not invent information.
 Do not claim that you checked a tool if no tool was used.
@@ -342,8 +351,11 @@ Provide the final answer directly to the user.
     # Sends the final prompt to the LLM.
     response = llm.invoke(final_prompt)
 
-    # Returns the final answer without extra spaces.
-    return response.content.strip()
+    answer = response.content.strip()
+
+    memory.add_exchange(question, answer)
+
+    return answer
 
 
 # Defines a function called extract_machine_id that receives one question.
@@ -378,4 +390,3 @@ if __name__ == "__main__":
 
     # Prints the final Agent answer.
     print(answer)
-
