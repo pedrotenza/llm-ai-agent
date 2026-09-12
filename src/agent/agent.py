@@ -17,13 +17,14 @@ from sentence_transformers import SentenceTransformer
 from src.agent.tools import search_documents, get_machine_api_status
 from src.agent.prompts import SYSTEM_PROMPT
 from src.agent.memory import memory
-from src.config import LLM_MODEL, TEMPERATURE, NUM_CTX
+from src.config import LLM_MODEL, TEMPERATURE, NUM_CTX, NUM_PREDICT
 
 
 llm = ChatOllama(
     model=LLM_MODEL,
     temperature=TEMPERATURE,
-    num_ctx=NUM_CTX
+    num_ctx=NUM_CTX,
+    num_predict=NUM_PREDICT
 )
 
 

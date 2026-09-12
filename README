@@ -78,38 +78,28 @@ https://chatgpt.com/c/6a997e6e-8244-83eb-85a8-534d58cc40cc
 
 
 llm-ai-agent/
-│
-├── documents/
-│
-├── vector_store/
-│
-├── requirements.txt
-│
+├── documents/                    → contener los documentos que utilizará el sistema
+├── vector_store/                 → almacenar los vectores generados a partir de los documentos
+├── requirements.txt              → definir las dependencias del proyecto
 └── src/
-    │
-    ├── __init__.py 
-    │
+    ├── __init__.py               → inicializar el paquete principal de la aplicación
     ├── rag/
-    │   ├── pdf_loader.py
-    │   ├── embeddings.py
-    │   ├── vector_store.py
-    │   └── rag_pipeline.py
-    │
+    │   ├── pdf_loader.py         → cargar y extraer el contenido de los archivos PDF
+    │   ├── embeddings.py         → generar embeddings a partir del contenido de los documentos
+    │   ├── vector_store.py       → gestionar el almacenamiento y la búsqueda de vectores
+    │   └── rag_pipeline.py       → gestionar el flujo completo de recuperación de información
     ├── agent/
-    │   ├── agent.py
-    │   ├── tools.py
-    │   ├── memory.py
-    │   └── prompts.py
-    │
+    │   ├── agent.py              → gestionar el comportamiento y la ejecución del agente
+    │   ├── tools.py              → definir las herramientas que puede utilizar el agente
+    │   ├── memory.py             → gestionar la memoria y el contexto del agente
+    │   └── prompts.py            → definir los prompts utilizados por el agente
     ├── api/
-    │   ├── client.py
-    │   └── services.py
-    │
+    │   ├── client.py             → gestionar la comunicación con la API del LLM
+    │   └── services.py           → contener las operaciones de negocio de la aplicación
     ├── server/
-    │   └── main.py
-    ├── config.py
-    └── main.py
-
+    │   └── main.py               → gestionar el servidor y exponer la aplicación
+    ├── config.py                 → gestionar la configuración de la aplicación
+    └── main.py                   → gestionar el punto de entrada principal de la aplicación
 
 
 
