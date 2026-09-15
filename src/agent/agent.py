@@ -18,7 +18,14 @@ from sentence_transformers import SentenceTransformer
 from src.agent.tools import search_documents, get_machine_api_status
 from src.agent.prompts import SYSTEM_PROMPT
 from src.agent.memory import memory
-from src.config import LLM_MODEL, TEMPERATURE, NUM_CTX, NUM_PREDICT
+from src.config import (
+    LLM_MODEL,
+    TEMPERATURE,
+    NUM_CTX,
+    NUM_PREDICT,
+    ROUTER_THRESHOLD,
+    ROUTER_NONE_THRESHOLD,
+)
 
 
 llm = ChatOllama(
@@ -97,9 +104,6 @@ _ROUTER_VECTOR_LABELS = [
     label for label in _ROUTER_LABELS for _ in _ROUTER_EXAMPLES[label]
 ]
 
-# Defines the minimum similarity score required by the semantic router.
-_ROUTER_THRESHOLD = 0.45
-
 # Defines keywords that indicate the question refers to a manual or document.
 _MANUAL_KEYWORDS = [
     "manual", "handbuch", "manuale", "manuel",
@@ -129,11 +133,22 @@ def _semantic_decisions(question: str) -> list[str]:
         if label not in label_scores or score > label_scores[label]:
             label_scores[label] = float(score)
 
-    # Labels above threshold
-    selected = [label for label, score in label_scores.items() if score >= _ROUTER_THRESHOLD]
+    # Prints all label scores sorted from highest to lowest.
+    print("[DEBUG] Semantic router scores:")
+    for label, score in sorted(label_scores.items(), key=lambda x: -x[1]):
+        print(f"        {label:<6} = {score:.3f}")
 
-    # Prints the semantic router scores and selected labels.
-    print(f"[DEBUG] Semantic router scores: {label_scores}")
+    # Applies a different threshold for NONE to avoid false positives.
+    selected = []
+    for label, score in label_scores.items():
+        if label == "NONE":
+            if score >= ROUTER_NONE_THRESHOLD:
+                selected.append(label)
+        else:
+            if score >= ROUTER_THRESHOLD:
+                selected.append(label)
+
+    # Prints the selected labels after applying the thresholds.
     print(f"[DEBUG] Selected labels: {selected}")
 
     # Returns the list of selected labels (may be empty).
