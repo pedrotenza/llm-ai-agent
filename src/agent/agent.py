@@ -4,7 +4,8 @@
 # Creates a multilingual semantic router to classify user questions.
 # Uses the LLM as a fallback when the semantic router is not confident.
 # Decides whether to use RAG, API or no tool for each question.
-# Executes the selected tool and generates the final answer with the LLM.
+# Supports multi-intent detection: multiple tools can be executed at once.
+# Executes the selected tool(s) and generates the final answer with the LLM.
 # Extracts machine IDs from user questions.
 # Runs the Agent when the file is executed directly.
 
@@ -99,11 +100,20 @@ _ROUTER_VECTOR_LABELS = [
 # Defines the minimum similarity score required by the semantic router.
 _ROUTER_THRESHOLD = 0.45
 
+# Defines keywords that indicate the question refers to a manual or document.
+_MANUAL_KEYWORDS = [
+    "manual", "handbuch", "manuale", "manuel",
+    "procedure", "procedimiento", "procedura", "procédure",
+    "normativa", "regulation", "reglamento", "regolamento",
+    "safety manual", "handbook",
+]
 
-# Defines a function called _semantic_decision that receives one question.
-def _semantic_decision(question: str) -> str | None:
+
+# Defines a function called _semantic_decisions that receives one question.
+def _semantic_decisions(question: str) -> list[str]:
     """
-    Returns API, RAG, NONE or None if the similarity is low.
+    Returns a list of labels (API, RAG, NONE) whose similarity
+    exceeds the threshold. Can return multiple labels.
     Works in any language supported by the model.
     """
 
@@ -113,28 +123,21 @@ def _semantic_decision(question: str) -> str | None:
     # Calculates the similarity between the question and all router examples.
     sims = _ROUTER_VECTORS @ q_vec
 
-    # Finds the position of the most similar example.
-    best_idx = int(np.argmax(sims))
+    # Best score per label
+    label_scores = {}
+    for label, score in zip(_ROUTER_VECTOR_LABELS, sims):
+        if label not in label_scores or score > label_scores[label]:
+            label_scores[label] = float(score)
 
-    # Gets the similarity score of the best example.
-    best_score = float(sims[best_idx])
+    # Labels above threshold
+    selected = [label for label, score in label_scores.items() if score >= _ROUTER_THRESHOLD]
 
-    # Gets the label of the most similar example.
-    best_label = _ROUTER_VECTOR_LABELS[best_idx]
+    # Prints the semantic router scores and selected labels.
+    print(f"[DEBUG] Semantic router scores: {label_scores}")
+    print(f"[DEBUG] Selected labels: {selected}")
 
-    # Prints the semantic router decision and similarity score.
-    print(f"[DEBUG] Semantic router: {best_label} (score={best_score:.3f})")
-
-    # Checks if the similarity score is below the confidence threshold.
-    if best_score < _ROUTER_THRESHOLD:
-        # Prints that the semantic router is not confident enough.
-        print("[DEBUG] Semantic router: low confidence, falling back to LLM.")
-
-        # Returns None so the LLM can make the decision.
-        return None
-
-    # Returns the decision made by the semantic router.
-    return best_label
+    # Returns the list of selected labels (may be empty).
+    return selected
 
 
 # Defines a function called _llm_decision that receives one question.
@@ -236,7 +239,7 @@ Decision:
 # Defines a function called decide_tool that receives one question.
 def decide_tool(question: str) -> str:
     """
-    Decides which tool should be used.
+    Decides which tool should be used (single-tool mode).
 
     1. Multilingual semantic router.
     2. LLM fallback if the semantic router is not confident.
@@ -247,16 +250,19 @@ def decide_tool(question: str) -> str:
         NONE -> no tool is required
     """
 
-    # Calls the semantic router to classify the question.
-    semantic = _semantic_decision(question)
+    # Calls the semantic router to classify the question (multi-intent).
+    semantic = _semantic_decisions(question)
 
-    # Checks if the semantic router returned a confident decision.
-    if semantic is not None:
+    # Checks if the semantic router returned at least one confident decision.
+    if semantic:
+        # Picks the first label as the primary decision (single-tool mode).
+        decision = semantic[0]
+
         # Prints the decision made by the semantic router.
-        print(f"[DEBUG] Tool decision by semantic router: {semantic}")
+        print(f"[DEBUG] Tool decision by semantic router: {decision}")
 
         # Returns the semantic router decision.
-        return semantic
+        return decision
 
     # Calls the LLM router when the semantic router is not confident.
     decision = _llm_decision(question)
@@ -271,56 +277,72 @@ def decide_tool(question: str) -> str:
 # Defines a function called invoke_agent that receives one question.
 def invoke_agent(question: str) -> str:
     """
-    Main Agent logic.
+    Main Agent logic with multi-intent support.
 
-    1. The router decides RAG, API or NONE.
-    2. The selected tool is executed.
+    1. The router decides which labels (RAG, API, NONE) apply.
+    2. All selected tools are executed.
     3. The LLM generates the final answer.
     """
 
+    # Retrieves the conversation context relevant to the question.
     memory_context = memory.get_context_for_question(question)
 
-    # Calls the router to decide which tool should be used.
-    decision = decide_tool(question)
+    # Multi-intent detection using the semantic router.
+    decisions = _semantic_decisions(question)
+
+    # Fallback to LLM if nothing selected by the semantic router.
+    if not decisions:
+        print("[DEBUG] Semantic router: low confidence, falling back to LLM.")
+        decisions = [_llm_decision(question)]
+
+    # --- Multi-tool rule: manual keyword + machine ID -> RAG + API ---
+
+    # Checks if the question mentions a manual or document.
+    mentions_manual = any(kw in question.lower() for kw in _MANUAL_KEYWORDS)
+
+    # Checks if the question mentions a machine ID.
+    mentions_machine = extract_machine_id(question) is not None
+
+    # If both are present, ensure both RAG and API are executed.
+    if mentions_manual and mentions_machine:
+        if "RAG" not in decisions:
+            decisions.append("RAG")
+        if "API" not in decisions:
+            decisions.append("API")
+        print("[DEBUG] Multi-tool rule triggered: RAG + API added to decisions.")
+
+    # Prints the final list of decisions.
+    print(f"[DEBUG] Final decisions: {decisions}")
 
     # Creates an empty list to store tool results.
     observations = []
 
-    # Checks if the selected tool is RAG.
-    if decision == "RAG":
+    # Executes the RAG tool if selected.
+    if "RAG" in decisions:
         # Prints that the RAG tool is being executed.
         print("[DEBUG] Executing RAG tool...")
 
         # Searches the internal documents using the user's question.
-        result = search_documents(question)
+        observations.append(search_documents(question))
 
-        # Adds the search result to the observations list.
-        observations.append(result)
-
-    # Checks if the selected tool is API.
-    elif decision == "API":
+    # Executes the API tool if selected.
+    if "API" in decisions:
         # Prints that the API tool is being executed.
         print("[DEBUG] Executing API tool...")
 
-        # Extracts the machine ID from the user's question.
-        machine_id = extract_machine_id(question)
-
-        if not machine_id:
-            machine_id = extract_machine_id(memory_context)
+        # Extracts the machine ID from the question or from memory.
+        machine_id = extract_machine_id(question) or extract_machine_id(memory_context)
 
         # Checks if a machine ID was found.
-        if not machine_id:
-            # Returns an error message when no machine ID is found.
-            return "No pude identificar el ID de la máquina en la pregunta."
-
-        # Gets the current machine information from the API.
-        result = get_machine_api_status(machine_id)
-
-        # Adds the API result to the observations list.
-        observations.append(result)
+        if machine_id:
+            # Gets the current machine information from the API.
+            observations.append(get_machine_api_status(machine_id))
+        else:
+            # Adds an error message when no machine ID is found.
+            observations.append("No pude identificar el ID de la máquina en la pregunta.")
 
     # Checks if no tool is required.
-    elif decision == "NONE":
+    if "NONE" in decisions and not observations:
         # Prints that no tool is required.
         print("[DEBUG] No tool required.")
 
@@ -352,10 +374,13 @@ Provide the final answer directly to the user.
     # Sends the final prompt to the LLM.
     response = llm.invoke(final_prompt)
 
+    # Extracts the final answer.
     answer = response.content.strip()
 
+    # Stores the exchange in memory.
     memory.add_exchange(question, answer)
 
+    # Returns the final answer.
     return answer
 
 

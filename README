@@ -241,7 +241,19 @@ with internal documentation as the primary knowledge source and web search as a 
 
 
 
+commit 12.09. 13:21
 
+feat: LLM Agent with RAG + API (semantic router)
+
+What works:
+- Agent autonomously decides between RAG and API using semantic routing.
+- RAG retrieves from indexed PDFs (FAISS + embeddings).
+- API queries local FastAPI server for machine status.
+- Works with small models (llama3.2:3b).
+
+What does NOT work yet:
+- No conversational memory (each query is independent).
+- Metadata (source, page) not preserved in RAG chunks.
 
 
 
