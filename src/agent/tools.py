@@ -26,9 +26,9 @@ def search_documents(question: str) -> str:
         if not results:
             return "No encontré información relevante en los documentos."
 
-        # Formateamos para que el LLM entienda las fuentes
+        # Formateamos para que el LLM entienda las fuentes (incluyendo la página)
         context = "\n\n".join([
-            f"Fuente: {r.get('source', 'desconocida')}\nTexto: {r['text']}"
+            f"Fuente: {r.get('source', 'desconocida')} (página {r.get('page', '?')})\nTexto: {r['text']}"
             for r in results
         ])
         return f"Información extraída de los documentos:\n{context}"

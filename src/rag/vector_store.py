@@ -1,3 +1,4 @@
+# Creates a FAISS vector database from embeddings.txt
 # Creates a FAISS vector database from embeddings and text chunks.
 # Saves metadata together with each text chunk, including source and page.
 # Saves the FAISS database locally.
@@ -146,8 +147,8 @@ def search_vector_store(index, metadata, query_embedding, k=3):
 # Runs this section only when the file is executed directly.
 if __name__ == "__main__":
 
-    # Imports functions to load PDFs and split text.
-    from src.rag.pdf_loader import load_all_pdfs, split_text
+    # Imports functions to load PDFs and create chunks with metadata.
+    from src.rag.pdf_loader import load_all_pdfs, create_chunks
 
     # Imports the function to create embeddings.
     from src.rag.embeddings import create_embeddings
@@ -158,23 +159,14 @@ if __name__ == "__main__":
     # Loads all PDF documents from the folder.
     print("Loading PDFs...")
 
-    raw_docs = load_all_pdfs(
+    pages = load_all_pdfs(
         documents_folder
     )
 
-    # raw_docs is a list of dicts: [{"text": ..., "source": ..., "page": ...}, ...]
-    # Extract all texts and combine into a single string.
-    all_text = "\n".join([doc["text"] for doc in raw_docs])
-
-    # Split the combined text into chunks (split_text expects a string).
+    # Creates chunks while preserving source and page metadata.
     print("Splitting text...")
-    text_chunks = split_text(all_text)
 
-    # Convert each chunk into the required dictionary format (source/page unknown).
-    chunks = [
-        {"text": chunk, "source": "desconocido", "page": 0}
-        for chunk in text_chunks
-    ]
+    chunks = create_chunks(pages)
 
     # Displays the number of generated chunks.
     print(
