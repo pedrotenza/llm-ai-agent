@@ -80,6 +80,12 @@ https://chatgpt.com/c/6a997e6e-8244-83eb-85a8-534d58cc40cc
 llm-ai-agent/
 ├── documents/                    → contener los documentos que utilizará el sistema
 ├── vector_store/                 → almacenar los vectores generados a partir de los documentos
+├── tests
+│   ├── pytest.ini
+│   ├── test_memory.py
+│   ├── test_tools.py
+│   └── test_router.py
+│ 
 ├── requirements.txt              → definir las dependencias del proyecto
 └── src/
     ├── __init__.py               → inicializar el paquete principal de la aplicación

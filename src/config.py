@@ -15,3 +15,7 @@ ROUTER_THRESHOLD = 0.45
 
 # Minimum score for NONE (higher to avoid false positives).
 ROUTER_NONE_THRESHOLD = 0.70
+
+# --- MEMORY CONFIGURATION ---
+# Maximum number of exchanges to keep in memory (sliding window).
+MEMORY_MAX_HISTORY = 10
