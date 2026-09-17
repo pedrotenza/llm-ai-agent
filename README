@@ -1,134 +1,31 @@
+## 🤖 llm-ai-agent
+ 
 
-cd G:\software-projects\llm-applications\llm-ai-agent
+A multilingual AI agent that combines **RAG** (Retrieval-Augmented Generation), **REST API integration**, 
+and **conversational memory** to answer questions about occupational safety and industrial maintenance.
 
-pip freeze > requirements.txt
-
-venv\Scripts\activate
-
-
-
-TEMINAL 1 (API server)
-
-python -m uvicorn src.server.main:app --reload
-
-TEMINAL 2 (Agent)
-
-python -m src.main
-
-
-RUNNING RAG
-python -m src.rag.rag_pipeline
-
-Was ist eine Gefährdungsbeurteilung?
-
-
-# 1. Check what has changed
-git status
-
-# 2. Stage the changes
-git add .
-
-# 3. Create a commit
-git commit -m "Description of the changes"
-
-# 4. Push the changes to the remote repository
-git push
+The agent autonomously decides **which tools to use** based on the user`s question, and can combine multiple 
+tools in a single query.
 
 
 
+## ✨ FEATURES 
+
+- 🧠 **Autonomous tool routing** — A multilingual semantic router decides between RAG, API, or no tool.
+- 📚 **RAG (Retrieval-Augmented Generation)** — Searches internal PDF documents using FAISS + sentence-transformers.
+- 🖥️ **REST API Integration** — Consults a local FastAPI server for real-time machine data.
+- 💬 **Conversational Memory** — Remembers previous questions to interpret follow-ups.
+- 🔀 **Multi-tool queries** — Can combine RAG + API + Memory in a single query.
+- 📎 **Source citation** — Answers from documents include the source file and page number.
+- 🌍 **Multilingual** — Works in Spanish, English, German, Italian, and French.
+- ✅ **Tested** — 18 automated tests with pytest.
+- ⚙️ **Configurable** — All parameters centralized in `src/config.py`.
+ llm-ai-agent
+ 
 
 
+## 🏗️ ARCHITECTURE 
 
-
-https://chatgpt.com/c/6a54f3cd-66c4-83eb-9bc4-63480baecfe2
-https://chatgpt.com/c/6a997e6e-8244-83eb-85a8-534d58cc40cc
-
-
-
-
-                    ┌──────────────┐
-                    │    Usuario   │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │     Agent    │
-                                        ┌──────────────┐
-                         │    Usuario   │
-                         └──────┬───────┘
-                                │
-                                ▼
-                         ┌──────────────┐
-                         │    Agent     │
-                         │   LLM/Brain  │
-                         └──────┬───────┘
-                                │
-                  ┌─────────────┼─────────────┐
-                  │             │             │
-                  ▼             ▼             ▼
-               RAG Tool      API Tool      Memory
-                  │             │             │
-                  ▼             ▼             ▼
-                FAISS        REST API    Conversation
-                  │
-                  ▼
-               Documents
-
-
-
-
-llm-ai-agent/
-├── documents/                    → contener los documentos que utilizará el sistema
-├── vector_store/                 → almacenar los vectores generados a partir de los documentos
-├── tests
-│   ├── pytest.ini
-│   ├── test_memory.py
-│   ├── test_tools.py
-│   └── test_router.py
-│ 
-├── requirements.txt              → definir las dependencias del proyecto
-└── src/
-    ├── __init__.py               → inicializar el paquete principal de la aplicación
-    ├── rag/
-    │   ├── pdf_loader.py         → cargar y extraer el contenido de los archivos PDF
-    │   ├── embeddings.py         → generar embeddings a partir del contenido de los documentos
-    │   ├── vector_store.py       → gestionar el almacenamiento y la búsqueda de vectores
-    │   └── rag_pipeline.py       → gestionar el flujo completo de recuperación de información
-    ├── agent/
-    │   ├── agent.py              → gestionar el comportamiento y la ejecución del agente
-    │   ├── tools.py              → definir las herramientas que puede utilizar el agente
-    │   ├── memory.py             → gestionar la memoria y el contexto del agente
-    │   └── prompts.py            → definir los prompts utilizados por el agente
-    ├── api/
-    │   ├── client.py             → gestionar la comunicación con la API del LLM
-    │   └── services.py           → contener las operaciones de negocio de la aplicación
-    ├── server/
-    │   └── main.py               → gestionar el servidor y exponer la aplicación
-    ├── config.py                 → gestionar la configuración de la aplicación
-    └── main.py                   → gestionar el punto de entrada principal de la aplicación
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# LLM AI Agent with RAG
-
-An LLM-based AI Agent that uses a **RAG pipeline** to retrieve information from internal PDF documents and generate context-aware responses using a local LLM.
-
-The Agent is designed to use RAG as its primary knowledge source and later use **web search as a fallback** when the required information is not available in the internal documentation.
-
-## Architecture
-
-```text
                          ┌──────────────────┐
                          │      User        │
                          └────────┬─────────┘
@@ -147,127 +44,283 @@ The Agent is designed to use RAG as its primary knowledge source and later use *
                  │                │                │
                  ▼                ▼                ▼
           ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-          │   RAG Tool  │  │ Web Search  │  │   Memory    │
-          └──────┬──────┘  │    Tool     │  └─────────────┘
-                 │         └─────────────┘
-                 ▼
-          ┌──────────────────┐
-          │  FAISS + PDFs    │
-          └──────────────────┘
-```
+          │   RAG Tool  │  │  API Tool   │  │   Memory    │
+          └──────┬──────┘  └──────┬──────┘  └─────────────┘
+                 │                │
+                 ▼                ▼
+          ┌─────────────┐  ┌─────────────┐
+          │ FAISS +     │  │  FastAPI    │
+          │ PDFs        │  │  REST API   │
+          └─────────────┘  └─────────────┘
 
-**Information priority:**
 
-```text
-User → Agent → RAG → sufficient information → Answer
-                 │
-                 └── insufficient → Web Search → Answer
-```
 
-## Project Structure
+Components
 
-```text
+Component	       Description	Location
+AI Agent	       Main logic: routing, tool execution, answer generation	src/agent/agent.py
+RAG Tool	       Searches internal PDF documents	src/agent/tools.py → search_documents()
+API Tool	       Queries a local FastAPI server for machine data	src/agent/tools.py → get_machine_api_status()
+Memory	Stores        conversation history for follow-up questions	src/agent/memory.py
+Router	Multilingual  semantic router (embedding-based)	src/agent/agent.py
+Vector Store	       FAISS index + metadata (source, page)	src/rag/vector_store.py
+API Server	       FastAPI REST API for machine data	src/server/main.py
+
+
+
+# 🛠️ TECH STACK 
+
+Layer	       Technology
+LLM	       llama3.2:3b via Ollama
+Embeddings	paraphrase-multilingual-MiniLM-L12-v2 (SentenceTransformers)
+Vector Store	FAISS (IndexFlatIP, cosine similarity)
+RAG	       pypdf + custom chunking with overlap
+API	       FastAPI + Uvicorn
+HTTP Client	requests
+Agent	       Custom semantic router + LangChain Ollama
+Testing	pytest
+Language	Python 3.13
+
+
+## 📁 Project Structure
+
 llm-ai-agent/
 │
-├──    documents
+├── documents/                    # Stores the PDF files that the RAG will index
+├── vector_store/                 # Holds the FAISS index and chunk metadata
 │
-├──    requirements.txt
+├── tests/                        # Verifies that the agent, router and tools work
+│   ├── test_memory.py            # Checks that memory stores and recalls context
+│   ├── test_router.py            # Checks that the router selects the correct tools
+│   └── test_tools.py             # Checks that the RAG and API tools return data
 │
-├──    src
-       │
-       │
-       ├── rag/
-       │   ├── pdf_loader.py
-       │   ├── embeddings.py
-       │   ├── vector_store.py
-       │   └── rag_pipeline.py
-       │
-       ├── agent/
-       │   ├── agent.py
-       │   ├── tools.py
-       │   ├── memory.py
-       │   └── prompts.py
-       │
-       ├── main.py
+├── src/                          # Contains the full source code of the project
+│   ├── config.py                 # Centralizes all parameters (LLM, API, router, memory)
+│   ├── main.py                   # Starts the interactive chat loop with the agent
+│   │
+│   ├── agent/                    # Implements the reasoning layer of the agent
+│   │   ├── agent.py              # Routes questions and executes the selected tools
+│   │   ├── tools.py              # Exposes RAG and API as callable tools
+│   │   ├── memory.py             # Stores and retrieves conversation history
+│   │   └── prompts.py            # Defines the system prompt and behaviour rules
+│   │
+│   ├── api/                      # Handles communication with the REST API
+│   │   ├── client.py             # Sends HTTP requests to the FastAPI server
+│   │   └── services.py           # Wraps API endpoints into reusable functions
+│   │
+│   ├── rag/                      # Implements the Retrieval-Augmented Generation pipeline
+│   │   ├── pdf_loader.py         # Loads PDFs and splits them into chunks with metadata
+│   │   ├── embeddings.py         # Converts text chunks into normalized embeddings
+│   │   ├── vector_store.py       # Builds, saves, loads and searches the FAISS index
+│   │   └── rag_pipeline.py       # Retrieves the most relevant chunks for a question
+│   │
+│   └── server/                   # Exposes a local REST API
+│       └── main.py               # Serves machine data through FastAPI endpoints
+│
+├── pytest.ini                    # Configures pytest for the test suite
+├── requirements.txt              # Lists the Python dependencies of the project
+└── README.md                     # Documents the project for users and reviewers
 
-```
 
-## Technologies
 
-* Python
-* LangChain
-* FAISS
-* Sentence Transformers
-* `all-MiniLM-L6-v2`
-* Ollama
-* Qwen 2.5 0.5B
+## 🚀 INSTALLATION  
 
-## Installation
+1. Clone the repository
 
-```bash
-pip install -r requirements.txt
-ollama pull qwen2.5:0.5b
-```
+       git clone https://github.com/pedrotenza/llm-ai-agent.git
+       cd llm-ai-agent
 
-Place PDF documents in:
+2. Create and activate a virtual environment
 
-```text
-documents/
-```
+       python -m venv venv
+       venv\Scripts\activate        # Windows
+       # source venv/bin/activate   # Linux/macOS
 
-Run:
+3. Install dependencies
 
-```bash
-python main.py
-```
+       pip install -r requirements.txt
 
-## Roadmap
+4. Install and pull the LLM
 
-* [x] PDF-based RAG pipeline
-* [ ] RAG as an Agent tool
-* [ ] Web search fallback
-* [ ] Conversation memory
-* [ ] Additional tools
-* [ ] Source/page references
-* [ ] Agent evaluation
+       ollama pull llama3.2:3b
 
-## Goal
+5. Add PDF documents
 
-Build a modular local **LLM AI Agent** that combines:
+       Place your PDF files in the documents/ folder.
 
-```text
-RAG + Tools + Memory + LLM
-```
+6. Build the vector store
 
-with internal documentation as the primary knowledge source and web search as a fallback.
+       python -m src.rag.vector_store
+
+7. Start the API server (in a separate terminal)
+
+       python -m uvicorn src.server.main:app --reload
+
+8. Run the agent
+
+        python -m src.main
 
 
 
 
+## 🔄 DAILY WORKFLOW  
+
+
+# Navigate to the project
+cd G:\software-projects\llm-applications\llm-ai-agent
+
+# Running the system (two terminals)
+
+
+Terminal 1 — API server:
+
+
+venv\Scripts\activate                           # Activate the virtual environment
+python -m uvicorn src.server.main:app --reload
+
+
+Terminal 2 — Agent:
+
+venv\Scripts\activate                            # Activate the virtual environment
+python -m src.main
+
+
+# (Optional) Update requirements if you installed new packages
+pip freeze > requirements.txt
+
+⚠️ The API server must be running before you start the agent, otherwise the API tool will fail.
 
 
 
-commit 12.09. 13:21
+## Git workflow (after making changes)
 
-feat: LLM Agent with RAG + API (semantic router)
+# 1. Check what has changed
+git status
 
-What works:
-- Agent autonomously decides between RAG and API using semantic routing.
-- RAG retrieves from indexed PDFs (FAISS + embeddings).
-- API queries local FastAPI server for machine status.
-- Works with small models (llama3.2:3b).
+# 2. Stage the changes
+git add .
 
-What does NOT work yet:
-- No conversational memory (each query is independent).
-- Metadata (source, page) not preserved in RAG chunks.
+# 3. Create a commit
+git commit -m "Description of the changes"
 
-
+# 4. Push the changes to the remote repository
+git push
 
 
 
 
+## 💬 USAGE EXAMPLES
+
+Example 1 — Machine status (API)
+
+       User: What is the status of M-102?
+       Agent: The status of M-102 is Maintenance. The current temperature is 42°C
+              and its last maintenance was on August 15, 2026.
+
+Example 2 — Document query (RAG)
+
+       User: What does the manual say about risk assessment?
+       Agent: According to manual.pdf (page 14), risk assessment is a fundamental aspect
+              of safety work...
+
+Example 3 — Multi-tool (RAG + API)
+
+       User: According to the manual, what should I do if M-102 exceeds 40°C?
+       Agent: According to the manual, if the temperature of M-102 exceeds 40°C,
+              you should perform immediate maintenance.
+
+Example 4 — Follow-up (Memory)
+
+       User: What is the status of M-102?
+       Agent: Maintenance, 42°C.
+       User: And its temperature?
+       Agent: The temperature of M-102 is 42°C.
+
+Example 5 — No tool needed (NONE)
+
+       User: What is 2+2?
+       Agent: 2+2 = 4
 
 
 
+## 🧪 RUNNING TESTS 
 
+python -m pytest
+
+Expected output:
+
+text
+tests/test_memory.py .......... [ 50%]
+tests/test_router.py ......    [ 80%]
+tests/test_tools.py .....      [100%]
+
+========================= 18 passed in 26.00s =========================
+Note: test_tools.py requires the FastAPI server to be running and the vector store to be built.
+
+
+
+## ⚙️ CONFIGURATION
+
+All parameters are centralized in src/config.py:
+
+# --- LLM CONFIGURATION ---
+LLM_MODEL = "llama3.2:3b"   
+TEMPERATURE = 0
+NUM_CTX = 4096
+NUM_PREDICT = 300
+
+# --- API CONFIGURATION (YOUR LOCAL SERVER!) ---
+API_BASE_URL = "http://127.0.0.1:8000"
+
+# --- SEMANTIC ROUTER CONFIGURATION ---
+# Minimum similarity score to accept a label from the semantic router.
+ROUTER_THRESHOLD = 0.45
+
+# Minimum score for NONE (higher to avoid false positives).
+ROUTER_NONE_THRESHOLD = 0.70
+
+# --- MEMORY CONFIGURATION ---
+# Maximum number of exchanges to keep in memory (sliding window).
+MEMORY_MAX_HISTORY = 10
+
+
+PARAMETER	       DESCRIPTION
+
+LLM_MODEL	       Ollama model to use
+TEMPERATURE	       LLM creativity (0 = deterministic)
+NUM_CTX	       Maximum context tokens
+NUM_PREDICT	       Maximum output tokens
+API_BASE_URL	       Local API server URL
+ROUTER_THRESHOLD	Minimum similarity for API/RAG
+ROUTER_NONE_THRESHOLDMinimum similarity for NONE
+MEMORY_MAX_HISTORY	Max conversation exchanges to remember
+
+
+
+## ⚠️ LIMITATIONS
+
+The API data is mocked (hardcoded in src/server/main.py). It is a proof of concept, not a real database.
+
+The LLM (llama3.2:3b) is small — it works well for this use case but is not a general-purpose assistant.
+
+No persistence — the vector store is rebuilt from PDFs, the memory is in-process only.
+
+Router threshold tuning — may need adjustment depending on your documents and questions.
+
+
+
+## 🗺️ ROADMAP 
+
+□ Add more machine data via a real database (SQLite/PostgreSQL).
+□ Add streaming responses.
+□ Add a web UI (Streamlit/FastAPI frontend).
+□ Add support for more document formats (DOCX, TXT).
+□ Add evaluation metrics (RAGAS or similar).
+□ Add Docker support.
+
+
+## 👤 Author
+
+**Pedro Tenza**
+- GitHub: [pedrotenza/llm-ai-agent](https://github.com/pedrotenza/llm-ai-agent)
 
