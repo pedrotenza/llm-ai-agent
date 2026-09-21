@@ -11,75 +11,169 @@ tools in a single query.
 
 ## ✨ FEATURES 
 
-- 🧠 **Autonomous tool routing** — A multilingual semantic router decides between RAG, API, or no tool.
-- 📚 **RAG (Retrieval-Augmented Generation)** — Searches internal PDF documents using FAISS + sentence-transformers.
-- 🖥️ **REST API Integration** — Consults a local FastAPI server for real-time machine data.
-- 💬 **Conversational Memory** — Remembers previous questions to interpret follow-ups.
-- 🔀 **Multi-tool queries** — Can combine RAG + API + Memory in a single query.
-- 📎 **Source citation** — Answers from documents include the source file and page number.
-- 🌍 **Multilingual** — Works in Spanish, English, German, Italian, and French.
-- ✅ **Tested** — 18 automated tests with pytest.
-- ⚙️ **Configurable** — All parameters centralized in `src/config.py`.
- llm-ai-agent
+- 🧠 **Autonomous tool routing**          — A multilingual semantic router decides between RAG, API, or no tool.
+- 📚 **RAG (Retrieval-Augmented Generation) Searches internal PDF documents using FAISS + sentence-transformers.
+- 🖥️ **REST API Integration**             — Consults a local FastAPI server for real-time machine data.
+- 💬 **Conversational Memory**            — Remembers previous questions to interpret follow-ups.
+- 🔀 **Multi-tool queries**               — Can combine RAG + API + Memory in a single query.
+- 📎 **Source citation**                  — Answers from documents include the source file and page number.
+- 🌍 **Multilingual**                     — Works in Spanish, English, German, Italian, and French.
+- ✅ **Tested**                           — 18 automated tests with pytest.
+- ⚙️ **Configurable**                     — All parameters centralized in `src/config.py`.
  
 
 
 ## 🏗️ ARCHITECTURE 
+
+        ═══════════════════════════════════════════════════
+        INDEXING PHASE (offline — runs once)
+        ═══════════════════════════════════════════════════
+
+                  ┌─────────────┐
+                  │  documents/ │
+                  │   PDFs      │
+                  └──────┬──────┘
+                         │
+                         ▼
+          ┌─────────────────────────────┐
+          │       PDF Loader            │
+          │  • loads each PDF page      │
+          │  • splits into chunks       │
+          │  • keeps source + page      │
+          └──────────────┬──────────────┘
+                         │ chunks
+                         ▼
+          ┌─────────────────────────────┐
+          │     Embedding Model         │
+          │  (sentence-transformers)    │
+          │  chunk → vector             │
+          └──────────────┬──────────────┘
+                         │ vectors
+                         ▼
+          ┌─────────────────────────────┐
+          │  FAISS + metadata           │
+          │  (vector_store/)            │
+          └─────────────────────────────┘
+
+
+        ═══════════════════════════════════════════════════
+        RUNTIME PHASE (online — runs on every query)
+        ═══════════════════════════════════════════════════
+
 
                          ┌──────────────────┐
                          │      User        │
                          └────────┬─────────┘
                                   │
                                   ▼
-                         ┌──────────────────┐
-                         │     AI Agent     │
-                         │                  │
-                         │  Reasoning       │
-                         │  Tools           │
-                         │  Memory          │
-                         │  Prompts         │
-                         └────────┬─────────┘
-                                  │
-                 ┌────────────────┼────────────────┐
-                 │                │                │
-                 ▼                ▼                ▼
-          ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-          │   RAG Tool  │  │  API Tool   │  │   Memory    │
-          └──────┬──────┘  └──────┬──────┘  └─────────────┘
-                 │                │
-                 ▼                ▼
-          ┌─────────────┐  ┌─────────────┐
-          │ FAISS +     │  │  FastAPI    │
-          │ PDFs        │  │  REST API   │
-          └─────────────┘  └─────────────┘
+                    ┌──────────────────────────┐
+                    │        AI Agent          │
+                    │                          │
+                    │  ┌────────────────────┐  │
+                    │  │   Semantic Router  │  │  
+                    │  │   (embeddings)     │  │
+                    │  │ question → vector  │  │
+                    │  └─────────┬──────────┘  │
+                    │            │             │
+                    │            ▼             │
+                    │  ┌────────────────────┐  │
+                    │  │  Tool Execution    │  │  
+                    │  │  (in invoke_agent) │  │
+                    │  └─────────┬──────────┘  │
+                    └────────────┼─────────────┘
+                                 │
+                 ┌───────────────┴───────────────┐
+                 │                               │
+                 ▼                               ▼
+          ┌─────────────┐                 ┌─────────────┐
+          │  RAG Tool   │                 │  API Tool   │
+          │  Embedding  │                 │             │
+          │chunk→ vector│                 │             │
+          └──────┬──────┘                 └──────┬──────┘
+                 │                               │
+                 ▼                               ▼
+          ┌─────────────┐                 ┌─────────────┐
+          │ FAISS +     │                 │  FastAPI    │
+          │ PDFs        │                 │  REST API   │
+          └──────┬──────┘                 └──────┬──────┘
+                 │                               │
+                 └───────────────┬───────────────┘
+                                 │
+                                 │ tool results
+                                 │
+    ┌────────────────────────────┼────────────────────────────┐
+    │                            │                            │
+    │                            ▼                            │
+    │              ┌──────────────────────────┐               │
+    │              │           LLM            │               │
+    │              │                          │               │
+    │              │  • Analyzes the results  │               │
+    │              │  • Combines the sources  │               │
+    │              │  • Generates the answer  │               │
+    │              └────────────┬─────────────┘               │
+    │                           │                             │
+    │                           ▼                             │
+    │                   ┌──────────────┐                      │
+    │                   │    Answer    │                      │
+    │                   └──────────────┘                      │
+    │                                                         │
+    │              ┌──────────────────────────┐               │
+    └─────────────►│         Memory           │───────────────┘
+                   │                          │
+                   │  Conversation history    │
+                   │  (always active)         │
+                   └──────────────────────────┘
 
 
 
-Components
 
-Component	       Description	Location
-AI Agent	       Main logic: routing, tool execution, answer generation	src/agent/agent.py
-RAG Tool	       Searches internal PDF documents	src/agent/tools.py → search_documents()
-API Tool	       Queries a local FastAPI server for machine data	src/agent/tools.py → get_machine_api_status()
-Memory	Stores        conversation history for follow-up questions	src/agent/memory.py
-Router	Multilingual  semantic router (embedding-based)	src/agent/agent.py
-Vector Store	       FAISS index + metadata (source, page)	src/rag/vector_store.py
-API Server	       FastAPI REST API for machine data	src/server/main.py
+
+Component	       Description	                                                                Location
+
+User	              External actor who submits the query to the agent.	                     N/A
+
+**AI Agent**         Main logic: routing, tool execution, and answer generation                   `src/agent/agent.py` 
+**Semantic Router**  Embedding-based router that decides which tool to use.                       `src/agent/agent.py` 
+**Embedding Model(Ro)Multilingual model. Converts the user question into a vector for routing.    `src/agent/agent.py` → `_embedder` 
+**Tool Execution**   Executes the selected tools and collects their results. Part of invoke_agent `src/agent/agent.py`
+**invoke_agent**     Entry of agent. Orchestrates flow: memory, routing, tool execution, answer   `src/agent/agent.py` → `invoke_agent()`
+
+
+**RAG Tool**         Searches internal PDF documents.                                             `src/agent/tools.py` → `search_documents()`
+**Embedding Model(RA)English model. Converts PDF chunks and queries into vectors for FAISS.       `src/rag/embeddings.py` → `create_embeddings()` 
+**Vector Store**     FAISS index + chunk metadata.                                                `src/rag/vector_store.py` 
+
+**API Tool**         Queries the local FastAPI server for machine data.                           `src/agent/tools.py` → `get_machine_api_status()` 
+**API Server**       FastAPI REST API for machine data.                                           `src/server/main.py`
+
+**LLM**              Generates the final answer from tool results and context.                    `src/agent/agent.py`
+
+**Memory**           Stores conversation history for follow-ups.                                  `src/agent/memory.py` 
+
+**PDF Loader**       Loads PDFs and splits them into chunks.                                      `src/rag/pdf_loader.py` 
+
+
+Answer	              Final output generated by the LLM and returned to the user.	              N/A (output)
+
 
 
 
 # 🛠️ TECH STACK 
 
-Layer	       Technology
-LLM	       llama3.2:3b via Ollama
-Embeddings	paraphrase-multilingual-MiniLM-L12-v2 (SentenceTransformers)
-Vector Store	FAISS (IndexFlatIP, cosine similarity)
-RAG	       pypdf + custom chunking with overlap
-API	       FastAPI + Uvicorn
-HTTP Client	requests
-Agent	       Custom semantic router + LangChain Ollama
-Testing	pytest
-Language	Python 3.13
+Layer	       Technology	                            What it really tells you
+
+LLM	       llama3.2:3b via Ollama	              Small 3B local model via Ollama. No cloud APIs. Fast but less powerful than GPT-4.
+Embeddings	paraphrase-multilingual-MiniLM-L12-v2 
+              (SentenceTransformers)	              Multilingual, lightweight embedding model used via SentenceTransformers. Supports ES/EN/DE/IT/FR. This is the Embedding Model.
+Vector Store	FAISS (IndexFlatIP, cosine similarity)	FAISS with exact inner-product search and cosine similarity. Precise for small/medium sets, not optimized for scale.
+RAG	       pypdf + custom chunking with overlap	PDFs read with pypdf. Custom overlapping chunking.Corresponds to PDF Loader / Ingestion.
+API	       FastAPI + Uvicorn	                     REST API server for machine data, served with Uvicorn.
+HTTP          Client	requests	                     API Tool uses requests to call the FastAPI server.
+Agent	       Custom semantic router + LangChain Ollama	No full agent framework. Custom semantic router plus LangChain only for Ollama/LLM integration.
+Testing	pytest	                                   18 automated tests with pytest.
+Language	Python 3.13	                            Entire project in Python 3.13. Very recent, possible library compatibility issues.
+
+
 
 
 ## 📁 Project Structure
