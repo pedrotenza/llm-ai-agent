@@ -182,7 +182,7 @@ llm-ai-agent/
 │   └── test_tools.py             # Checks that the RAG and API tools return data
 │
 ├── src/                          # Contains the full source code of the project
-│   ├── config.py                 # Centralizes all parameters (LLM, API, router, memory)
+│   ├── config.py                 # Centralizes all parameters (LLM, API, router, memory, embeddings, RAG)
 │   ├── main.py                   # Starts the interactive chat loop with the agent
 │   │
 │   ├── agent/                    # Implements the reasoning layer of the agent
