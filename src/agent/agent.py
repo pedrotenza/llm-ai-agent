@@ -25,6 +25,7 @@ from src.config import (
     NUM_PREDICT,
     ROUTER_THRESHOLD,
     ROUTER_NONE_THRESHOLD,
+    EMBEDDING_MODEL,
 )
 
 
@@ -36,8 +37,8 @@ llm = ChatOllama(
 )
 
 
-# Creates a multilingual semantic router.
-_embedder = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+# Creates the embedding model used by the multilingual semantic router.
+_embedder = SentenceTransformer(EMBEDDING_MODEL)
 
 # Creates example questions for each possible tool decision.
 _ROUTER_EXAMPLES = {

@@ -1,4 +1,3 @@
-
 # Loads text from PDF files while keeping source and page information. 
 # Loads all PDF files from a folder and preserves their metadata. 
 # Splits text into smaller chunks with overlap between consecutive chunks. 
@@ -6,10 +5,27 @@
 # Displays the total number of chunks and information from the first chunk. 
  
  
+import re
 from pathlib import Path 
 from pypdf import PdfReader 
  
+from src.config import RAG_CHUNK_SIZE, RAG_CHUNK_OVERLAP
  
+ 
+# Cleans extracted text by fixing hyphenated line breaks and extra whitespace.
+def clean_text(text):
+
+    # Joins words that were split by a hyphen and a line break.
+    # Example: "Versi- cherte" becomes "Versicherte".
+    text = re.sub(r"-\s+", "", text)
+
+    # Replaces multiple spaces, tabs and newlines with a single space.
+    text = re.sub(r"\s+", " ", text)
+
+    # Removes leading and trailing spaces.
+    return text.strip()
+
+
 # Defines a function called load_pdf that receives one PDF file path. 
 def load_pdf(file_path): 
  
@@ -28,6 +44,9 @@ def load_pdf(file_path):
         # Checks if text was successfully extracted from the page. 
         if page_text: 
  
+            # Cleans the extracted text before storing it.
+            page_text = clean_text(page_text)
+
             # Adds the page text and its metadata to the pages list. 
             pages.append({ 
  
@@ -71,7 +90,7 @@ def load_all_pdfs(folder_path):
  
  
 # Defines a function that splits text into smaller chunks with overlap. 
-def split_text(text, chunk_size=500, overlap=100): 
+def split_text(text, chunk_size=RAG_CHUNK_SIZE, overlap=RAG_CHUNK_OVERLAP): 
  
     # Splits the complete text into a list of individual words. 
     words = text.split() 
@@ -102,7 +121,7 @@ def split_text(text, chunk_size=500, overlap=100):
  
  
 # Defines a function that creates chunks while preserving source and page metadata. 
-def create_chunks(pages, chunk_size=500, overlap=100): 
+def create_chunks(pages, chunk_size=RAG_CHUNK_SIZE, overlap=RAG_CHUNK_OVERLAP): 
  
     # Creates an empty list where all chunks will be stored. 
     chunks = [] 

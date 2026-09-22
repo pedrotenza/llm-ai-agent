@@ -14,9 +14,10 @@
 
 # Imports the SentenceTransformer library for creating text embeddings.
 from sentence_transformers import SentenceTransformer
+from src.config import EMBEDDING_MODEL
 
 
-# Defines the name of the embedding model.
+# Creates the embedding model using the centralized configuration.
 MODEL_NAME = "all-MiniLM-L6-v2"
 
 

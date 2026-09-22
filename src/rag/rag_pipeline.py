@@ -4,17 +4,19 @@ This layer is responsible ONLY for retrieving information from documents.
 Response generation is handled by the Agent.
 """
 
+from src.config import RAG_MIN_SCORE, RAG_TOP_K
 from src.rag.embeddings import create_embeddings
 from src.rag.vector_store import load_vector_store, search_vector_store
 
 
-def retrieve_information(question, k=3):
+def retrieve_information(question, k=RAG_TOP_K, min_score=RAG_MIN_SCORE):
     """
     Retrieves the most relevant document chunks for a question.
     
     Args:
         question (str): The user's question
-        k (int): Number of chunks to retrieve (default 3)
+        k (int): Number of chunks to retrieve (default RAG_TOP_K)
+        min_score (float): Minimum similarity score to keep a chunk (default RAG_MIN_SCORE)
     
     Returns:
         list: List of dictionaries with text and metadata
@@ -33,18 +35,22 @@ def retrieve_information(question, k=3):
         k=k
     )
     
+    # Filter out chunks with a score below the minimum threshold
+    results = [r for r in results if r["score"] >= min_score]
+    
     # Return results with metadata
     return results
 
 
-def retrieve_information_with_metadata(question, k=3):
+def retrieve_information_with_metadata(question, k=RAG_TOP_K, min_score=RAG_MIN_SCORE):
     """
     Retrieves chunks with full metadata (source, page, etc.).
     Useful for the Agent to cite sources.
     
     Args:
         question (str): The user's question
-        k (int): Number of chunks to retrieve (default 3)
+        k (int): Number of chunks to retrieve (default RAG_TOP_K)
+        min_score (float): Minimum similarity score to keep a chunk (default RAG_MIN_SCORE)
     
     Returns:
         list: List of dictionaries with text and metadata
@@ -59,13 +65,16 @@ def retrieve_information_with_metadata(question, k=3):
         k=k
     )
     
+    # Filter out chunks with a score below the minimum threshold
+    results = [r for r in results if r["score"] >= min_score]
+    
     return results
 
 
 if __name__ == "__main__":
     # Quick test
     question = input("\nAsk your question: ")
-    chunks = retrieve_information(question, k=3)
+    chunks = retrieve_information(question, k=RAG_TOP_K)
     
     print("\nRetrieved chunks:")
     for i, chunk in enumerate(chunks, 1):
