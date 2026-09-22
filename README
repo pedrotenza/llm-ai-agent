@@ -20,12 +20,12 @@ tools in a single query.
 - 🌍 **Multilingual**                     — Works in Spanish, English, German, Italian, and French.
 - ✅ **Tested**                           — 18 automated tests with pytest.
 - ⚙️ **Configurable**                     — All parameters centralized in `src/config.py`.
- 
+- 🎯 **Score filtering**                  — Discards low-relevance chunks using a configurable minimum score. 
 
 
 ## 🏗️ ARCHITECTURE 
 
-        ═══════════════════════════════════════════════════
+         ═══════════════════════════════════════════════════
         INDEXING PHASE (offline — runs once)
         ═══════════════════════════════════════════════════
 
@@ -60,7 +60,6 @@ tools in a single query.
         RUNTIME PHASE (online — runs on every query)
         ═══════════════════════════════════════════════════
 
-
                          ┌──────────────────┐
                          │      User        │
                          └────────┬─────────┘
@@ -70,14 +69,14 @@ tools in a single query.
                     │        AI Agent          │
                     │                          │
                     │  ┌────────────────────┐  │
-                    │  │   Semantic Router  │  │  
+                    │  │   Semantic Router  │  │
                     │  │   (embeddings)     │  │
                     │  │ question → vector  │  │
                     │  └─────────┬──────────┘  │
                     │            │             │
                     │            ▼             │
                     │  ┌────────────────────┐  │
-                    │  │  Tool Execution    │  │  
+                    │  │  Tool Execution    │  │
                     │  │  (in invoke_agent) │  │
                     │  └─────────┬──────────┘  │
                     └────────────┼─────────────┘
@@ -85,73 +84,67 @@ tools in a single query.
                  ┌───────────────┴───────────────┐
                  │                               │
                  ▼                               ▼
-          ┌─────────────┐                 ┌─────────────┐
-          │  RAG Tool   │                 │  API Tool   │
-          │  Embedding  │                 │             │
-          │chunk→ vector│                 │             │
-          └──────┬──────┘                 └──────┬──────┘
-                 │                               │
-                 ▼                               ▼
-          ┌─────────────┐                 ┌─────────────┐
-          │ FAISS +     │                 │  FastAPI    │
-          │ PDFs        │                 │  REST API   │
-          └──────┬──────┘                 └──────┬──────┘
-                 │                               │
-                 └───────────────┬───────────────┘
+          ┌─────────────────────┐         ┌─────────────┐
+          │      RAG Tool       │         │  API Tool   │
+          │                     │         │             │
+          │  question → vector  │         │             │
+          │  (uses Embedding    │         │             │
+          │   Model)            │         │             │
+          └──────────┬──────────┘         └──────┬──────┘
+                     │                           │
+                     ▼                           ▼
+          ┌─────────────────────┐         ┌─────────────┐
+          │  FAISS + metadata   │         │  FastAPI    │
+          │  (search)           │         │  REST API   │
+          └──────────┬──────────┘         └──────┬──────┘
+                     │                           │
+                     └───────────────┬───────────┘
+                                     │ tool results
+                                     ▼
+                    ┌──────────────────────────┐
+                    │           LLM            │
+                    │  • Analyzes results      │
+                    │  • Combines sources      │
+                    │  • Generates answer      │
+                    └────────────┬─────────────┘
                                  │
-                                 │ tool results
+                                 ▼
+                         ┌──────────────┐
+                         │    Answer    │
+                         └──────────────┘
+                                 ▲
                                  │
-    ┌────────────────────────────┼────────────────────────────┐
-    │                            │                            │
-    │                            ▼                            │
-    │              ┌──────────────────────────┐               │
-    │              │           LLM            │               │
-    │              │                          │               │
-    │              │  • Analyzes the results  │               │
-    │              │  • Combines the sources  │               │
-    │              │  • Generates the answer  │               │
-    │              └────────────┬─────────────┘               │
-    │                           │                             │
-    │                           ▼                             │
-    │                   ┌──────────────┐                      │
-    │                   │    Answer    │                      │
-    │                   └──────────────┘                      │
-    │                                                         │
-    │              ┌──────────────────────────┐               │
-    └─────────────►│         Memory           │───────────────┘
-                   │                          │
-                   │  Conversation history    │
-                   │  (always active)         │
-                   └──────────────────────────┘
+                    ┌──────────────────────────┐
+                    │         Memory           │
+                    │  Conversation history    │
+                    │  (always active)         │
+                    └──────────────────────────┘
 
 
 
 
 
-Component	       Description	                                                                Location
+Component	       Description	                                                        Location
 
-User	              External actor who submits the query to the agent.	                     N/A
+User	              External actor who submits the query to the agent.	              N/A
 
-**AI Agent**         Main logic: routing, tool execution, and answer generation                   `src/agent/agent.py` 
-**Semantic Router**  Embedding-based router that decides which tool to use.                       `src/agent/agent.py` 
-**Embedding Model(Ro)Multilingual model. Converts the user question into a vector for routing.    `src/agent/agent.py` → `_embedder` 
-**Tool Execution**   Executes the selected tools and collects their results. Part of invoke_agent `src/agent/agent.py`
-**invoke_agent**     Entry of agent. Orchestrates flow: memory, routing, tool execution, answer   `src/agent/agent.py` → `invoke_agent()`
+**invoke_agent**     Entry point. Orchestrates the full agent flow.                        `src/agent/agent.py` → `invoke_agent()` |
+**Semantic Router**  Embedding-based router that decides which tool to use.                `src/agent/agent.py` → `_semantic_decisions()` |
+**Tool Execution**   Executes the selected tools and collects their results.               `src/agent/agent.py` (inside `invoke_agent`) |
+
+**RAG Tool**         Searches internal PDF documents.                                      `src/agent/tools.py` → `search_documents()` |
+**API Tool**         Queries the local FastAPI server for machine data.                    `src/agent/tools.py` → `get_machine_api_status()` |
+
+**Vector Store**     FAISS index + chunk metadata.                                         `src/rag/vector_store.py` → `search_vector_store()` |
+**API Server**       FastAPI REST API for machine data.                                    `src/server/main.py` → `get_machine()` |
 
 
-**RAG Tool**         Searches internal PDF documents.                                             `src/agent/tools.py` → `search_documents()`
-**Embedding Model(RA)English model. Converts PDF chunks and queries into vectors for FAISS.       `src/rag/embeddings.py` → `create_embeddings()` 
-**Vector Store**     FAISS index + chunk metadata.                                                `src/rag/vector_store.py` 
+**LLM**              Generates the final answer from tool results and context.             `src/agent/agent.py` → `llm.invoke()` |
+**Memory**           Stores conversation history for follow-ups.                           `src/agent/memory.py` → `ConversationMemory` |
 
-**API Tool**         Queries the local FastAPI server for machine data.                           `src/agent/tools.py` → `get_machine_api_status()` 
-**API Server**       FastAPI REST API for machine data.                                           `src/server/main.py`
 
-**LLM**              Generates the final answer from tool results and context.                    `src/agent/agent.py`
-
-**Memory**           Stores conversation history for follow-ups.                                  `src/agent/memory.py` 
-
-**PDF Loader**       Loads PDFs and splits them into chunks.                                      `src/rag/pdf_loader.py` 
-
+**PDF Loader**       Loads PDFs, cleans text and splits them into chunks.                  `src/rag/pdf_loader.py` → `load_pdf()` / `create_chunks()` |
+**Embedding Model**  Multilingual model shared by the Semantic Router, the RAG Tool and the PDF Loader. | `src/config.py` → `EMBEDDING_MODEL` · used in `src/agent/agent.py` and `src/rag/embeddings.py` |
 
 Answer	              Final output generated by the LLM and returned to the user.	              N/A (output)
 
@@ -166,7 +159,7 @@ LLM	       llama3.2:3b via Ollama	              Small 3B local model via Ollama.
 Embeddings	paraphrase-multilingual-MiniLM-L12-v2 
               (SentenceTransformers)	              Multilingual, lightweight embedding model used via SentenceTransformers. Supports ES/EN/DE/IT/FR. This is the Embedding Model.
 Vector Store	FAISS (IndexFlatIP, cosine similarity)	FAISS with exact inner-product search and cosine similarity. Precise for small/medium sets, not optimized for scale.
-RAG	       pypdf + custom chunking with overlap	PDFs read with pypdf. Custom overlapping chunking.Corresponds to PDF Loader / Ingestion.
+RAG	       pypdf + custom chunking with overlap	PDFs read with pypdf. Custom overlapping chunking with text cleaning. Source + page metadata preserved.
 API	       FastAPI + Uvicorn	                     REST API server for machine data, served with Uvicorn.
 HTTP          Client	requests	                     API Tool uses requests to call the FastAPI server.
 Agent	       Custom semantic router + LangChain Ollama	No full agent framework. Custom semantic router plus LangChain only for Ollama/LLM integration.
@@ -353,54 +346,64 @@ Note: test_tools.py requires the FastAPI server to be running and the vector sto
 
 
 
-## ⚙️ CONFIGURATION
+## ⚙️ CONFIGURATION  
 
-All parameters are centralized in src/config.py:
+All parameters are centralized in `src/config.py`:
 
+```python
 # --- LLM CONFIGURATION ---
-LLM_MODEL = "llama3.2:3b"   
+LLM_MODEL = "llama3.2:3b"
 TEMPERATURE = 0
 NUM_CTX = 4096
 NUM_PREDICT = 300
 
-# --- API CONFIGURATION (YOUR LOCAL SERVER!) ---
+# --- API CONFIGURATION ---
 API_BASE_URL = "http://127.0.0.1:8000"
 
 # --- SEMANTIC ROUTER CONFIGURATION ---
-# Minimum similarity score to accept a label from the semantic router.
 ROUTER_THRESHOLD = 0.45
-
-# Minimum score for NONE (higher to avoid false positives).
 ROUTER_NONE_THRESHOLD = 0.70
 
 # --- MEMORY CONFIGURATION ---
-# Maximum number of exchanges to keep in memory (sliding window).
 MEMORY_MAX_HISTORY = 10
 
+# --- EMBEDDING CONFIGURATION ---
+EMBEDDING_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
 
-PARAMETER	       DESCRIPTION
+# --- RAG CONFIGURATION ---
+RAG_CHUNK_SIZE = 200
+RAG_CHUNK_OVERLAP = 50
+RAG_MIN_SCORE = 0.4
+RAG_TOP_K = 3
+```
 
-LLM_MODEL	       Ollama model to use
-TEMPERATURE	       LLM creativity (0 = deterministic)
-NUM_CTX	       Maximum context tokens
-NUM_PREDICT	       Maximum output tokens
-API_BASE_URL	       Local API server URL
-ROUTER_THRESHOLD	Minimum similarity for API/RAG
-ROUTER_NONE_THRESHOLDMinimum similarity for NONE
-MEMORY_MAX_HISTORY	Max conversation exchanges to remember
-
+| Parameter | Description | Used in |
+|-----------|-------------|---------|
+`LLM_MODEL`                 Ollama model to use                       `src/agent/agent.py` |
+`TEMPERATURE`               LLM creativity (0 = deterministic)        `src/agent/agent.py` |
+`NUM_CTX`                   Maximum context tokens                    `src/agent/agent.py` |
+`NUM_PREDICT`               Maximum output tokens                     `src/agent/agent.py` |
+`API_BASE_URL`              Local API server URL                      `src/api/client.py` |
+`ROUTER_THRESHOLD`          Minimum similarity for API/RAG            `src/agent/agent.py` |
+`ROUTER_NONE_THRESHOLD`     Minimum similarity for NONE               `src/agent/agent.py` |
+`MEMORY_MAX_HISTORY`        Max conversation exchanges to remember    `src/agent/memory.py` |
+`EMBEDDING_MODEL`           Multilingual embedding model (shared by Router and RAG) `src/agent/agent.py`, `src/rag/embeddings.py` |
+`RAG_CHUNK_SIZE`            Words per chunk when splitting PDFs       `src/rag/pdf_loader.py` |
+`RAG_CHUNK_OVERLAP`         Overlap between consecutive chunks        `src/rag/pdf_loader.py` |
+`RAG_MIN_SCORE`             Minimum score to keep a retrieved chunk   `src/rag/rag_pipeline.py` |
+`RAG_TOP_K`                 Number of chunks to retrieve per query    `src/rag/rag_pipeline.py` |
 
 
 ## ⚠️ LIMITATIONS
 
-The API data is mocked (hardcoded in src/server/main.py). It is a proof of concept, not a real database.
 
-The LLM (llama3.2:3b) is small — it works well for this use case but is not a general-purpose assistant.
 
-No persistence — the vector store is rebuilt from PDFs, the memory is in-process only.
-
-Router threshold tuning — may need adjustment depending on your documents and questions.
-
+- **The API data is mocked** (hardcoded in `src/server/main.py`). It is a proof of concept, not a real database.
+- **The LLM (`llama3.2:3b`) is small** — it works well for this use case but is not a general-purpose assistant.
+- **No persistence** — the vector store is rebuilt from PDFs; the memory is in-process only.
+- **Router threshold tuning** — may need adjustment depending on your documents and questions.
+- **RAG score threshold** — if all retrieved chunks have a score below `RAG_MIN_SCORE` (0.4), the RAG returns no results, and the agent will say it could not find relevant information.
+- **Embedding model size** — the unified multilingual model (`paraphrase-multilingual-MiniLM-L12-v2`) is larger and slower than the previous English-only model, but it enables multilingual search.
 
 
 ## 🗺️ ROADMAP 
