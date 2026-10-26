@@ -114,7 +114,13 @@ _MANUAL_KEYWORDS = [
 ]
 
 
-# Defines a function called _semantic_decisions that receives one question.
+# ============================================================
+# ROUTER: decides which tool to use (API, RAG, NONE)
+# ============================================================
+
+# Compares the question with example questions (API, RAG, NONE)
+# using embeddings and cosine similarity, and returns the labels
+# whose score exceeds the thresholds.
 def _semantic_decisions(question: str) -> list[str]:
     """
     Returns a list of labels (API, RAG, NONE) whose similarity
@@ -156,7 +162,12 @@ def _semantic_decisions(question: str) -> list[str]:
     return selected
 
 
-# Defines a function called _llm_decision that receives one question.
+# ============================================================
+# FALLBACK: LLM decides if the router is not confident
+# ============================================================
+
+# Uses the LLM to decide between API, RAG or NONE when the
+# semantic router returns no confident label.
 def _llm_decision(question: str) -> str:
     """
     Fallback: LLM router if the semantic router is not confident.
@@ -252,7 +263,12 @@ Decision:
     return "NONE"
 
 
-# Defines a function called decide_tool that receives one question.
+# ============================================================
+# SINGLE-TOOL DECISION: router + LLM fallback
+# ============================================================
+
+# Returns a single tool decision by calling the semantic router
+# first and falling back to the LLM if the router is not confident.
 def decide_tool(question: str) -> str:
     """
     Decides which tool should be used (single-tool mode).
@@ -290,7 +306,13 @@ def decide_tool(question: str) -> str:
     return decision
 
 
-# Defines a function called invoke_agent that receives one question.
+# ============================================================
+# MAIN ENTRY POINT: orchestrates the full agent flow
+# ============================================================
+
+# Coordinates the whole flow: memory, router, tools and LLM.
+# Executes the selected tools, collects their results, and
+# generates the final answer with the LLM.
 def invoke_agent(question: str) -> str:
     """
     Main Agent logic with multi-intent support.
@@ -400,7 +422,11 @@ Provide the final answer directly to the user.
     return answer
 
 
-# Defines a function called extract_machine_id that receives one question.
+# ============================================================
+# UTILITY: extract a machine ID from a question
+# ============================================================
+
+# Extracts a machine ID (e.g. "M-102") from the question using regex.
 def extract_machine_id(question: str) -> str | None:
     """
     Extracts a machine ID such as M-101 or M-102 from the question.

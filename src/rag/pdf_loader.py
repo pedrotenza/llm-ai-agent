@@ -1,10 +1,10 @@
-# Loads text from PDF files while keeping source and page information. 
-# Loads all PDF files from a folder and preserves their metadata. 
-# Splits text into smaller chunks with overlap between consecutive chunks. 
-# Creates chunks while keeping the original source and page information. 
-# Displays the total number of chunks and information from the first chunk. 
- 
- 
+# Cleans extracted text by fixing hyphenated line breaks and extra whitespace.
+# Defines a function called load_pdf that receives one PDF file path. 
+# Defines a function that loads all PDF files from a folder and preserves metadata. 
+# Defines a function that splits text into smaller chunks with overlap. 
+# Defines a function that creates chunks while preserving source and page metadata.
+# Checks if this file is being executed directly.
+
 import re
 from pathlib import Path 
 from pypdf import PdfReader 

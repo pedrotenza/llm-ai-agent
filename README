@@ -12,7 +12,7 @@ tools in a single query.
 ## ✨ FEATURES 
 
 - 🧠 **Autonomous tool routing**          — A multilingual semantic router decides between RAG, API, or no tool.
-- 📚 **RAG (Retrieval-Augmented Generation) Searches internal PDF documents using FAISS + sentence-transformers.
+- 📚 **RAG(Retrieval-Augmented Generation)- Searches internal PDF documents using FAISS + sentence-transformers.
 - 🖥️ **REST API Integration**             — Consults a local FastAPI server for real-time machine data.
 - 💬 **Conversational Memory**            — Remembers previous questions to interpret follow-ups.
 - 🔀 **Multi-tool queries**               — Can combine RAG + API + Memory in a single query.
@@ -55,10 +55,9 @@ tools in a single query.
           │  (vector_store/)            │
           └─────────────────────────────┘
 
-
-        ═══════════════════════════════════════════════════
+       ═══════════════════════════════════════════════════
         RUNTIME PHASE (online — runs on every query)
-        ═══════════════════════════════════════════════════
+       ═══════════════════════════════════════════════════
 
                          ┌──────────────────┐
                          │      User        │
@@ -74,52 +73,65 @@ tools in a single query.
                     │  │ question → vector  │  │
                     │  └─────────┬──────────┘  │
                     │            │             │
-                    │            ▼             │
-                    │  ┌────────────────────┐  │
-                    │  │  Tool Execution    │  │
-                    │  │  (in invoke_agent) │  │
-                    │  └─────────┬──────────┘  │
-                    └────────────┼─────────────┘
+                    │            │  no confident label?
+                    │            ├──────────────────────┐
+                    │            │                      │
+                    │            ▼                      ▼
+                    │  ┌────────────────────┐  ┌────────────────┐
+                    │  │  Tool Execution    │  │  LLM Fallback  │
+                    │  │  (in invoke_agent) │  │ (_llm_decision)│
+                    │  └─────────┬──────────┘  └───────┬────────┘
+                    │            │                     │
+                    │            │  ◄──────────────────┘
+                    │            │  (decides API/RAG/NONE)
+                    └────────────┼─────────────────────┘
                                  │
-                 ┌───────────────┴───────────────┐
-                 │                               │
-                 ▼                               ▼
-          ┌─────────────────────┐         ┌─────────────┐
-          │      RAG Tool       │         │  API Tool   │
-          │                     │         │             │
-          │  question → vector  │         │             │
-          │  (uses Embedding    │         │             │
-          │   Model)            │         │             │
-          └──────────┬──────────┘         └──────┬──────┘
-                     │                           │
-                     ▼                           ▼
-          ┌─────────────────────┐         ┌─────────────┐
-          │  FAISS + metadata   │         │  FastAPI    │
-          │  (search)           │         │  REST API   │
-          └──────────┬──────────┘         └──────┬──────┘
-                     │                           │
-                     └───────────────┬───────────┘
-                                     │ tool results
-                                     ▼
-                    ┌──────────────────────────┐
-                    │           LLM            │
-                    │  • Analyzes results      │
-                    │  • Combines sources      │
-                    │  • Generates answer      │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                         ┌──────────────┐
-                         │    Answer    │
-                         └──────────────┘
-                                 ▲
-                                 │
-                    ┌──────────────────────────┐
-                    │         Memory           │
-                    │  Conversation history    │
-                    │  (always active)         │
-                    └──────────────────────────┘
-
+                 ┌───────────────┼───────────────┐
+                 │               │               │
+                 ▼               ▼               ▼
+          ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+          │  RAG Tool   │ │  API Tool   │ │    NONE     │
+          │             │ │             │ │             │
+          │  question   │ │             │ │ no tool     │
+          │  → vector   │ │             │ │ executed    │
+          │  (uses      │ │             │ │             │
+          │   Embedding │ │             │ │             │
+          │   Model)    │ │             │ │             │
+          └──────┬──────┘ └──────┬──────┘ └─────────────┘
+                 │               │
+                 ▼               ▼
+          ┌─────────────┐ ┌─────────────┐
+          │ FAISS +     │ │  REST API   │
+          │ metadata    │ │  FastAPI    │
+          │ (search)    │ │             │
+          └──────┬──────┘ └──────┬──────┘
+                 │               │
+                 └───────┬───────┘
+                         │ tool results
+                         │ (or empty if NONE)
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+        │                ▼                │
+        │   ┌──────────────────────────┐  │
+        │   │           LLM            │  │
+        │   │                          │  │
+        │   │  • Analyzes results      │  │
+        │   │  • Combines sources      │  │
+        │   │  • Generates answer      │  │
+        │   └────────────┬─────────────┘  │
+        │                │                │
+        │                ▼                │
+        │        ┌──────────────┐         │
+        │        │    Answer    │         │
+        │        └──────────────┘         │
+        │                                 │
+        │   ┌──────────────────────────┐  │
+        └──►│         Memory           │◄─┘
+            │                          │
+            │  Conversation history    │
+            │  (always active)         │
+            └──────────────────────────┘
 
 
 
@@ -128,23 +140,31 @@ Component	       Description	                                                   
 
 User	              External actor who submits the query to the agent.	              N/A
 
-**invoke_agent**     Entry point. Orchestrates the full agent flow.                        `src/agent/agent.py` → `invoke_agent()` |
-**Semantic Router**  Embedding-based router that decides which tool to use.                `src/agent/agent.py` → `_semantic_decisions()` |
-**Tool Execution**   Executes the selected tools and collects their results.               `src/agent/agent.py` (inside `invoke_agent`) |
+**invoke_agent**     Entry point. Orchestrates the full agent flow.                        `src/agent/agent.py` → `invoke_agent()` 
+**Semantic Router**  Embedding-based router that decides which tool to use.                `src/agent/agent.py` → `_semantic_decisions()` 
+**Tool Execution**   Executes the selected tools and collects their results.               `src/agent/agent.py` (inside `invoke_agent`) 
 
-**RAG Tool**         Searches internal PDF documents.                                      `src/agent/tools.py` → `search_documents()` |
-**API Tool**         Queries the local FastAPI server for machine data.                    `src/agent/tools.py` → `get_machine_api_status()` |
+**RAG Tool**         Searches internal PDF documents.                                      `src/agent/tools.py` → `search_documents()` 
+**API Tool**         Queries the local FastAPI server for machine data.                    `src/agent/tools.py` → `get_machine_api_status()` 
 
-**Vector Store**     FAISS index + chunk metadata.                                         `src/rag/vector_store.py` → `search_vector_store()` |
-**API Server**       FastAPI REST API for machine data.                                    `src/server/main.py` → `get_machine()` |
-
-
-**LLM**              Generates the final answer from tool results and context.             `src/agent/agent.py` → `llm.invoke()` |
-**Memory**           Stores conversation history for follow-ups.                           `src/agent/memory.py` → `ConversationMemory` |
+**Vector Store**     FAISS index + chunk metadata.                                         `src/rag/vector_store.py` → `search_vector_store()` 
 
 
-**PDF Loader**       Loads PDFs, cleans text and splits them into chunks.                  `src/rag/pdf_loader.py` → `load_pdf()` / `create_chunks()` |
-**Embedding Model**  Multilingual model shared by the Semantic Router, the RAG Tool and the PDF Loader. | `src/config.py` → `EMBEDDING_MODEL` · used in `src/agent/agent.py` and `src/rag/embeddings.py` |
+
+**REST API**         Representational State Transfer / Application Programming Interface   `src/server/main.py` → `get_machine()`
+                     Standard way for two programs to communicate over HTTP (internet)     
+                     using URLs and other methods.    
+**FastAPI**          Python library used to build the REST API                             `venv/lib/python3.x/site-packages/fastapi/  →  `src/server/main.py`
+**API Server**       Uvicorn is the program that receives HTTP requests/sends the responses`venv/.../site-packages/uvicorn/
+                                                   
+
+**LLM**              Generates the final answer from tool results and context.             `src/agent/agent.py` → `llm.invoke()` 
+**Memory**           Stores conversation history for follow-ups.                           `src/agent/memory.py` → `ConversationMemory` 
+
+
+**PDF Loader**       Loads PDFs, cleans text and splits them into chunks.                  `src/rag/pdf_loader.py` → `load_pdf()` / `create_chunks()` 
+**Embedding Model**  Multilingual model shared by the Semantic Router, the RAG Tool and    `src/config.py` → `EMBEDDING_MODEL` · used in `src/agent/agent.py` and `src/rag/embeddings.py` |
+                     the PDF Loader.  
 
 Answer	              Final output generated by the LLM and returned to the user.	              N/A (output)
 
@@ -177,23 +197,20 @@ llm-ai-agent/
 ├── vector_store/                 # Holds the FAISS index and chunk metadata
 │
 ├── tests/                        # Verifies that the agent, router and tools work
-│   ├── test_memory.py            # Checks that memory stores and recalls context
-│   ├── test_router.py            # Checks that the router selects the correct tools
-│   └── test_tools.py             # Checks that the RAG and API tools return data
+│   ├── test_router.py            # Checks that memory stores and recalls context
+│   ├── test_tools.py             # Checks that the router selects the correct tools
+│   └── test_memory.py            # Checks that the RAG and API tools return data
 │
 ├── src/                          # Contains the full source code of the project
-│   ├── config.py                 # Centralizes all parameters (LLM, API, router, memory, embeddings, RAG)
+│   │
 │   ├── main.py                   # Starts the interactive chat loop with the agent
+│   ├── config.py                 # Centralizes all parameters (LLM, API, router, memory, embeddings, RAG)
 │   │
-│   ├── agent/                    # Implements the reasoning layer of the agent
-│   │   ├── agent.py              # Routes questions and executes the selected tools
-│   │   ├── tools.py              # Exposes RAG and API as callable tools
+│   ├── agent/                    # The logic that decides what to do and which tool to use.
+│   │   ├── agent.py              # Coordinates the agent and selects the appropriate tools to answer questions.
+│   │   ├── tools.py              # Exposes RAG and API to the agent as callable tools
 │   │   ├── memory.py             # Stores and retrieves conversation history
-│   │   └── prompts.py            # Defines the system prompt and behaviour rules
-│   │
-│   ├── api/                      # Handles communication with the REST API
-│   │   ├── client.py             # Sends HTTP requests to the FastAPI server
-│   │   └── services.py           # Wraps API endpoints into reusable functions
+│   │   └── prompts.py            # Defines how the agent should behave and respond.
 │   │
 │   ├── rag/                      # Implements the Retrieval-Augmented Generation pipeline
 │   │   ├── pdf_loader.py         # Loads PDFs and splits them into chunks with metadata
@@ -201,8 +218,13 @@ llm-ai-agent/
 │   │   ├── vector_store.py       # Builds, saves, loads and searches the FAISS index
 │   │   └── rag_pipeline.py       # Retrieves the most relevant chunks for a question
 │   │
-│   └── server/                   # Exposes a local REST API
-│       └── main.py               # Serves machine data through FastAPI endpoints
+│   ├── server/                   # Contains the API server that responds to data requests
+│   │   └── main.py               # Defines the API endpoints that return machine data   │ 
+│   │ 
+│   └── api/                      # Provides functions & Sends requests to the API server
+│       ├── services.py           # Provides ready-to-use functions that call the API endpoints
+│       └── client.py             # Sends HTTP requests to the API server
+│   
 │
 ├── pytest.ini                    # Configures pytest for the test suite
 ├── requirements.txt              # Lists the Python dependencies of the project
@@ -350,48 +372,77 @@ Note: test_tools.py requires the FastAPI server to be running and the vector sto
 
 All parameters are centralized in `src/config.py`:
 
-```python
-# --- LLM CONFIGURATION ---
-LLM_MODEL = "llama3.2:3b"
-TEMPERATURE = 0
-NUM_CTX = 4096
-NUM_PREDICT = 300
-
-# --- API CONFIGURATION ---
-API_BASE_URL = "http://127.0.0.1:8000"
 
 # --- SEMANTIC ROUTER CONFIGURATION ---
-ROUTER_THRESHOLD = 0.45
-ROUTER_NONE_THRESHOLD = 0.70
+ROUTER_THRESHOLD = 0.45                          # minimum similarity question-router examples to accept a label        → src/agent/agent.py
 
-# --- MEMORY CONFIGURATION ---
-MEMORY_MAX_HISTORY = 10
+ROUTER_NONE_THRESHOLD = 0.70                     # Minimum score for NONE (higher to avoid false positives)             → src/agent/agent.py
 
 # --- EMBEDDING CONFIGURATION ---
-EMBEDDING_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
+                                                 # Multilingual embedding model used by both the Semantic Router and the RAG pipeline.
+EMBEDDING_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"                                                              #→ src/agent/agent.py, src/rag/embeddings.py
 
 # --- RAG CONFIGURATION ---
-RAG_CHUNK_SIZE = 200
-RAG_CHUNK_OVERLAP = 50
-RAG_MIN_SCORE = 0.4
-RAG_TOP_K = 3
-```
+RAG_CHUNK_SIZE = 200                             # Number of words per chunk when splitting PDF text                    → src/rag/pdf_loader.py
 
-| Parameter | Description | Used in |
-|-----------|-------------|---------|
-`LLM_MODEL`                 Ollama model to use                       `src/agent/agent.py` |
-`TEMPERATURE`               LLM creativity (0 = deterministic)        `src/agent/agent.py` |
-`NUM_CTX`                   Maximum context tokens                    `src/agent/agent.py` |
-`NUM_PREDICT`               Maximum output tokens                     `src/agent/agent.py` |
-`API_BASE_URL`              Local API server URL                      `src/api/client.py` |
-`ROUTER_THRESHOLD`          Minimum similarity for API/RAG            `src/agent/agent.py` |
-`ROUTER_NONE_THRESHOLD`     Minimum similarity for NONE               `src/agent/agent.py` |
-`MEMORY_MAX_HISTORY`        Max conversation exchanges to remember    `src/agent/memory.py` |
-`EMBEDDING_MODEL`           Multilingual embedding model (shared by Router and RAG) `src/agent/agent.py`, `src/rag/embeddings.py` |
-`RAG_CHUNK_SIZE`            Words per chunk when splitting PDFs       `src/rag/pdf_loader.py` |
-`RAG_CHUNK_OVERLAP`         Overlap between consecutive chunks        `src/rag/pdf_loader.py` |
-`RAG_MIN_SCORE`             Minimum score to keep a retrieved chunk   `src/rag/rag_pipeline.py` |
-`RAG_TOP_K`                 Number of chunks to retrieve per query    `src/rag/rag_pipeline.py` |
+RAG_CHUNK_OVERLAP = 50                           # Number of words that overlap between consecutive chunks              → src/rag/pdf_loader.py
+
+RAG_MIN_SCORE = 0.4                              # Minimum similarity score question-retrieved chunk to keep it         → src/rag/rag_pipeline.py
+
+RAG_TOP_K = 3                                    # Number of chunks to retrieve per query                               → src/rag/rag_pipeline.py
+
+# --- API CONFIGURATION (YOUR LOCAL SERVER!) ---
+API_BASE_URL = "http://127.0.0.1:8000"           #                                              → src/api/client.py
+
+# --- MEMORY CONFIGURATION ---
+
+MEMORY_MAX_HISTORY = 10                          # Maximum number of exchanges to keep in memory (sliding window)       → src/agent/memory.py
+
+# --- LLM CONFIGURATION ---
+LLM_MODEL = "llama3.2:3b"                        #                                                                      → src/agent/agent.py
+TEMPERATURE = 0                                  # if the model is serious (0) or creative (1)                          → src/agent/agent.py
+NUM_CTX = 4096                                   # total context window (input + output tokens)                         → src/agent/agent.py
+NUM_PREDICT = 300    
+
+
+## 🔗 DEPENDENCIES
+
+       NumPy: numerical computations and array handling.
+              Does not download models.
+              Used in: src/rag/vector_store.py, src/rag/embeddings.py, src/agent/agent.py
+                     numpy==2.5.1
+
+       pypdf: read and extract text from PDF files.
+              Does not download models.
+              Used in: src/rag/pdf_loader.py
+                     pypdf==6.14.2
+
+       sentence-transformers: load embedding models.
+              Downloads the model 'paraphrase-multilingual-MiniLM-L12-v2' (~470 MB) from Hugging Face
+              the first time it is used.
+              Used in: src/rag/embeddings.py and src/agent/agent.py
+                     sentence-transformers==5.6.0
+
+       FAISS: vector index for similarity search.
+               Does not download models. Just installed.
+               Used in: src/rag/vector_store.py
+                     faiss-cpu==1.14.3
+
+       langchain-ollama: ChatOllama wrapper to connect with Ollama.
+              Does not download models. Ollama is installed separately, and the model is downloaded with 'ollama pull'.
+              Used in: src/agent/agent.py
+                     langchain-ollama==1.1.0
+
+       fastapi: framework to build the REST API.
+              Does not download models.
+              Used in: src/server/main.py
+                     fastapi==0.141.1
+
+       uvicorn: ASGI server to run the FastAPI app.
+              Does not download models.
+              Used to start the server: src/server/main.py
+                     uvicorn==0.51.0
+
 
 
 ## ⚠️ LIMITATIONS

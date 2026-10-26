@@ -1,45 +1,38 @@
 # src/api/services.py
-"""
-Servicios API que utilizan el cliente HTTP para comunicarse con el servidor FastAPI.
-"""
+
+
+# Defines get_machine_status to get the current status of a machine from the API server.
+#         Sends a GET request to the machine endpoint.
+
+# Defines get_all_machines to get the list of all machines from the API server.
+#         Sends a GET request to the machines endpoint.
+
+# Defines get_machine_maintenance_history to get the maintenance history of a machine from the API server.
+#         Sends a GET request to the machine maintenance endpoint.
+
 
 from src.api.client import APIClient
 
-# Instancia global del cliente (usa la URL desde config por defecto)
+
 api_client = APIClient()
 
 
+# Defines get_machine_status to get the current status of a machine from the API server.
 def get_machine_status(machine_id: str) -> dict:
-    """
-    Obtiene el estado actual de una máquina desde el servidor.
 
-    Args:
-        machine_id (str): Identificador de la máquina.
-
-    Returns:
-        dict: Respuesta de la API (puede contener "error" si falla).
-    """
+    # Sends a GET request to the machine endpoint.
     return api_client.get(f"/machines/{machine_id}")
 
 
+# Defines get_all_machines to get the list of all machines from the API server.
 def get_all_machines() -> list:
-    """
-    Obtiene el listado de todas las máquinas.
 
-    Returns:
-        list: Lista de máquinas o dict con error.
-    """
+    # Sends a GET request to the machines endpoint.
     return api_client.get("/machines")
 
 
+# Defines get_machine_maintenance_history to get the maintenance history of a machine from the API server.
 def get_machine_maintenance_history(machine_id: str) -> list:
-    """
-    Obtiene el historial de mantenimiento de una máquina.
 
-    Args:
-        machine_id (str): Identificador de la máquina.
-
-    Returns:
-        list: Historial de mantenimientos o dict con error.
-    """
+    # Sends a GET request to the machine maintenance endpoint.
     return api_client.get(f"/machines/{machine_id}/maintenance")

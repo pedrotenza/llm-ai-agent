@@ -58,19 +58,3 @@ def get_machine_api_status(machine_id: str) -> str:
             f"- Último mantenimiento: {data.get('last_maintenance', 'N/A')}")
 
 
-# (Opcional) Si quieres darle al agente la capacidad de listar todas las máquinas,
-# puedes descomentar esta función y añadirla como herramienta:
-#
-# def list_all_machines() -> str:
-#     """
-#     Obtiene el listado de todas las máquinas con su estado actual.
-#     """
-#     data = get_all_machines()
-#     if isinstance(data, dict) and "error" in data:
-#         return f"Error al obtener la lista de máquinas: {data['error']}"
-#     if not data:
-#         return "No hay máquinas registradas."
-#     lines = ["Listado de máquinas:"]
-#     for m in data:
-#         lines.append(f"- {m.get('id', '?')}: {m.get('status', 'desconocido')}")
-#     return "\n".join(lines)
